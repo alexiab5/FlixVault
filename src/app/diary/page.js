@@ -97,6 +97,9 @@ export default function MovieDiary() {
           {/* Action Buttons */}
           <div className="flex justify-end mb-4 space-x-2">
             <Button variant="ghost" size="icon" className="text-white">
+              <Icons.SquaresPlus />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-white">
               <Icons.Pencil />
             </Button>
             <Button variant="ghost" size="icon" className="text-white">
