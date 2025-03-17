@@ -16,7 +16,7 @@ const Card = ({ className, children, ...props }) => {
 
 // Custom Button Component
 const buttonVariants = {
-  ghost: 'bg-transparent hover:bg-white/10 text-white rounded-full p-2',
+  ghost: 'bg-transparent hover:bg-white/10 text-white rounded-full p-2 cursor-pointer',
 };
 
 const Button = ({ className, variant = 'ghost', size = 'icon', children, ...props }) => {
@@ -75,11 +75,23 @@ const movieData = [
 export default function MovieDiary() {
   const [movies] = useState(movieData);
 
+  // State for radio button checked status
+  const [checkedMovie, setCheckedMovie] = useState(null);
+
+  // Handle the radio button toggle
+  const handleRadioClick = (movieId) => {
+    if (checkedMovie === movieId) {
+      setCheckedMovie(null); // Uncheck if clicked again
+    } else {
+      setCheckedMovie(movieId); // Check the clicked movie
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Main Content */}
-      <div className="text-center mb-8">
-        <h1 className="text-5xl font-bold text-white mb-8">Your Diary</h1>
+      <div className="text-center mb-3">
+        <h2 className="text-2xl font-bold text-white mb-1">Your Diary</h2>
 
         <Card>
           {/* Action Buttons */}
@@ -110,12 +122,18 @@ export default function MovieDiary() {
           </div>
 
           {/* Movie Entries */}
-          <div className="max-h-[calc(4*4rem)] overflow-y-auto"> {/* Limits the height to show only 4 entries */}
+          <div className="max-h-[calc(7*4rem)] overflow-y-auto">
             <div className="space-y-8">
               {movies.map((movie) => (
                 <div key={movie.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
                   <div className="flex justify-center items-center">
-                    <div className="w-6 h-6 rounded-full border border-white/50 flex items-center justify-center mr-2"></div>
+                    {/* Radio button SVG from Icons */}
+                    <div 
+                      onClick={() => handleRadioClick(movie.id)} 
+                      className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer"
+                    >
+                      <Icons.RadioButton checked={checkedMovie === movie.id} />
+                    </div>
                     <span>{movie.year}</span>
                   </div>
                   <div className="text-center">{movie.month}</div>
