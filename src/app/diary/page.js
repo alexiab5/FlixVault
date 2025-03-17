@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import clsx from 'clsx';
 import Icons from "@/components/Icons";
+import { useRouter } from 'next/navigation';
 
 // Custom Card Component
 const Card = ({ className, children, ...props }) => {
@@ -87,6 +88,12 @@ export default function MovieDiary() {
     }
   };
 
+  const router = useRouter();
+  
+  const handleSearchPageNavigation = () => {
+    router.push('/search');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Main Content */}
@@ -96,7 +103,8 @@ export default function MovieDiary() {
         <Card>
           {/* Action Buttons */}
           <div className="flex justify-end mb-4 space-x-2">
-            <Button variant="ghost" size="icon" className="text-white">
+            <Button variant="ghost" size="icon" className="text-white"
+                          onClick={handleSearchPageNavigation}>
               <Icons.SquaresPlus />
             </Button>
             <Button variant="ghost" size="icon" className="text-white">
