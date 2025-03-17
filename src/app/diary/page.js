@@ -71,20 +71,12 @@ const movieData = [
   },
 ];
 
+
 export default function MovieDiary() {
   const [movies] = useState(movieData);
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Navigation */}
-      <nav className="flex justify-center space-x-8 text-white text-xl mb-12">
-        <a href="#" className="hover:opacity-80 transition-opacity">Log In</a>
-        <a href="#" className="hover:opacity-80 transition-opacity">Home</a>
-        <a href="#" className="hover:opacity-80 transition-opacity">Diary</a>
-        <a href="#" className="hover:opacity-80 transition-opacity">Lists</a>
-        <a href="#" className="hover:opacity-80 transition-opacity">Recommendations</a>
-      </nav>
-
       {/* Main Content */}
       <div className="text-center mb-8">
         <h1 className="text-5xl font-bold text-white mb-8">Your Diary</h1>
@@ -107,7 +99,7 @@ export default function MovieDiary() {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-7 text-white text-lg font-medium mb-4 border-b border-white/20 pb-2">
+          <div className="grid bg-transparent grid-cols-7 text-white text-lg font-medium mb-4 border-b border-white/20 pb-2 sticky top-0 bg-black/70 z-10">
             <div className="text-center">Year</div>
             <div className="text-center">Month</div>
             <div className="text-center">Day</div>
@@ -118,33 +110,35 @@ export default function MovieDiary() {
           </div>
 
           {/* Movie Entries */}
-          <div className="space-y-8">
-            {movies.map((movie) => (
-              <div key={movie.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
-                <div className="flex justify-center items-center">
-                  <div className="w-6 h-6 rounded-full border border-white/50 flex items-center justify-center mr-2"></div>
-                  <span>{movie.year}</span>
-                </div>
-                <div className="text-center">{movie.month}</div>
-                <div className="text-center">{movie.day}</div>
-                <div className="flex justify-center">
-                  <Image src={movie.poster || '/placeholder.svg'} alt={movie.movie} width={70} height={100} className="rounded-md" />
-                </div>
-                <div className="text-center">{movie.released}</div>
-                <div className="text-center">
+          <div className="max-h-[calc(4*4rem)] overflow-y-auto"> {/* Limits the height to show only 4 entries */}
+            <div className="space-y-8">
+              {movies.map((movie) => (
+                <div key={movie.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
+                  <div className="flex justify-center items-center">
+                    <div className="w-6 h-6 rounded-full border border-white/50 flex items-center justify-center mr-2"></div>
+                    <span>{movie.year}</span>
+                  </div>
+                  <div className="text-center">{movie.month}</div>
+                  <div className="text-center">{movie.day}</div>
                   <div className="flex justify-center">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={i < movie.rating ? 'text-white' : 'text-white/30'}>★</span>
-                    ))}
+                    <Image src={movie.poster || '/placeholder.svg'} alt={movie.movie} width={70} height={100} className="rounded-md" />
+                  </div>
+                  <div className="text-center">{movie.released}</div>
+                  <div className="text-center">
+                    <div className="flex justify-center">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i} className={i < movie.rating ? 'text-white' : 'text-white/30'}>★</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <Button variant="ghost" size="icon" className="text-white">
+                      <Icons.ArrowUpRight />
+                    </Button>
                   </div>
                 </div>
-                <div className="text-center">
-                <Button variant="ghost" size="icon" className="text-white">
-                  <Icons.ArrowUpRight />
-                </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
       </div>
