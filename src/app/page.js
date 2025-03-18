@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-  import RegularButton from '@/components/RegularButton';
+import RegularButton from '@/components/RegularButton';
 
 export default function Home() {
   const router = useRouter();
