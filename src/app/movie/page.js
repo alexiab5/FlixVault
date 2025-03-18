@@ -1,34 +1,21 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import MovieCard from '../components/MovieCard';
+import { useParams } from "next/navigation";
+import { getMovieById } from "@/lib/movie-data"; 
 
-export default function MoviesPage() {
-  const [movies, setMovies] = useState([]);
+export default function MovieDetailPage() {
+  const { id } = useParams(); // Get the movie ID from the URL
+  const movie = getMovieById(id); // Get movie details from in-memory database
 
-  // Fetch movies from the API route
-  useEffect(() => {
-    async function fetchMovies() {
-      const response = await fetch('/api/movies');
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);  // Log the fetched data to check what you’re getting
-        setMovies(data);
-      } else {
-        console.error('Failed to fetch movies');
-      }
-    }
-    fetchMovies();
-  }, []);
+  if (!movie) {
+    return <div className="text-white text-center">Movie not found</div>;
+  }
 
   return (
-    <div>
-      <h1>All Movies</h1>
-      <div className="movies-list">
-        {movies.map((movie) => (
-          <MovieCard key={movie.id} movie={movie} />
-        ))}
-      </div>
+    <div className="text-white text-center p-6">
+      <h1 className="text-4xl font-bold">{movie.title}</h1>
+      <p className="text-lg">{movie.year} - Directed by {movie.director}</p>
+      <img src={movie.posterUrl} alt={movie.title} className="mx-auto mt-4 rounded-lg shadow-lg" />
     </div>
   );
 }

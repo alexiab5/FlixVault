@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // In-memory movie database
 const movies = [
@@ -33,57 +33,55 @@ const movies = [
     director: "M. Night Shyamalan",
     posterUrl: "/placeholder.svg?height=400&width=300",
   },
-]
+];
 
 // Function to search movies by query
 function searchMovies(query) {
-  if (!query) return []
+  if (!query) return [];
 
-  const lowercaseQuery = query.toLowerCase()
+  const lowercaseQuery = query.toLowerCase();
   return movies.filter(
     (movie) =>
-      movie.title.toLowerCase().includes(lowercaseQuery) || movie.director.toLowerCase().includes(lowercaseQuery)
-  )
+      movie.title.toLowerCase().includes(lowercaseQuery) ||
+      movie.director.toLowerCase().includes(lowercaseQuery)
+  );
 }
 
 export function SearchBar() {
-  const [query, setQuery] = useState("") // Track search query
-  const [results, setResults] = useState([]) // Track filtered results
-  const [isOpen, setIsOpen] = useState(false) // Track if the search results dropdown should be open
-  const searchRef = useRef(null) // Ref for detecting clicks outside the search box
-  const router = useRouter() // Next.js Router
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const searchRef = useRef(null);
+  const router = useRouter();
 
-  // Handle click outside to close the dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setIsOpen(false) // Close the dropdown if clicked outside
+        setIsOpen(false);
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-  // Update search results when query changes
   useEffect(() => {
     if (query.length >= 2) {
-      const filteredMovies = searchMovies(query) // Use the searchMovies function to filter the movies
-      setResults(filteredMovies)
-      setIsOpen(true) // Open the results dropdown
+      const filteredMovies = searchMovies(query);
+      setResults(filteredMovies);
+      setIsOpen(true);
     } else {
-      setResults([]) // Clear results when query length is less than 2
-      setIsOpen(false) // Close the dropdown
+      setResults([]);
+      setIsOpen(false);
     }
-  }, [query])
+  }, [query]);
 
-  // Handle movie selection
   const handleSelectMovie = (movieId) => {
-    setIsOpen(false) // Close the dropdown when a movie is selected
-    router.push(`/movie/${movieId}`) // Navigate to the movie detail page
-  }
+    setIsOpen(false);
+    router.push(`/movie/${movieId}`);
+  };
 
   return (
     <div className="w-full max-w-md mx-auto relative" ref={searchRef}>
@@ -91,7 +89,7 @@ export function SearchBar() {
       <input
         type="text"
         value={query}
-        onChange={(e) => setQuery(e.target.value)} // Update the query state as the user types
+        onChange={(e) => setQuery(e.target.value)}
         placeholder="Search for a movie..."
         className="w-full p-3 rounded-md bg-white/20 backdrop-blur-sm text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
       />
@@ -101,7 +99,7 @@ export function SearchBar() {
           {results.map((movie) => (
             <div
               key={movie.id}
-              onClick={() => handleSelectMovie(movie.id)} // Select the movie when clicked
+              onClick={() => handleSelectMovie(movie.id)}
               className="p-3 hover:bg-white/10 cursor-pointer text-white"
             >
               {movie.title} ({movie.year}) - {movie.director}
@@ -110,5 +108,5 @@ export function SearchBar() {
         </div>
       )}
     </div>
-  )
+  );
 }
