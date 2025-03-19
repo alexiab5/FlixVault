@@ -35,7 +35,6 @@ const movies = [
   },
 ];
 
-// Function to search movies by query
 function searchMovies(query) {
   if (!query) return [];
 

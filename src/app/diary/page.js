@@ -60,12 +60,27 @@ export default function MovieDiary() {
 
   const handleFilter = () => {
     if (!filtered) {
-      setMovies(movieData.filter(movie => movie.rating >= 4));
+      setMovies(movieData.filter(movie => movie.rating == 4));
     } else {
       setMovies(movieData);
     }
     setFiltered(!filtered);
   };
+
+  
+  // Toggle filter dropdown
+  const toggleFilter = () => {
+    setIsFilterOpen(!isFilterOpen)
+  }
+
+  // Toggle rating selection
+  const toggleRating = (rating) => {
+    if (selectedRatings.includes(rating)) {
+      setSelectedRatings(selectedRatings.filter((r) => r !== rating))
+    } else {
+      setSelectedRatings([...selectedRatings, rating])
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

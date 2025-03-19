@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { getMovieById } from "@/lib/movie-data"
-import { X } from "lucide-react"
+import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts"
 
 export default function MovieDetail() {
   const params = useParams()
@@ -40,7 +39,6 @@ export default function MovieDetail() {
   }
 
   return (
-    <Layout>
       <div className="flex flex-col items-center justify-center min-h-[70vh]">
         <h2 className="text-2xl text-white text-center mb-8">I watched...</h2>
 
@@ -49,7 +47,7 @@ export default function MovieDetail() {
             onClick={handleClose}
             className="absolute top-2 right-2 text-white hover:bg-white/10 rounded-full p-1"
           >
-            <X size={24} />
+            {/* <X size={24} /> */}
           </button>
 
           <h1 className="text-2xl text-white text-center mb-6">
@@ -91,7 +89,6 @@ export default function MovieDetail() {
           </div>
         </div>
       </div>
-    </Layout>
   )
 }
 
