@@ -5,6 +5,8 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import Icons from "@/components/Icons";
 import { useRouter } from 'next/navigation';
+import { useMovieDiary } from '../../context/MovieDiaryContext';
+
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -34,7 +36,10 @@ const movieData = [
 ];
 
 export default function MovieDiary() {
-  const [movies, setMovies] = useState(movieData);
+
+  // const [movies, setMovies] = useState(movieData);
+  const { movies } = useMovieDiary(); // Use global state
+
   const [sortOrder, setSortOrder] = useState('desc');
   const [checkedMovie, setCheckedMovie] = useState(null);
   const [filtered, setFiltered] = useState(false);
