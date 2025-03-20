@@ -52,9 +52,24 @@ export default function MovieDiary() {
 
   const handleDelete = () => {
     if (checkedReview !== null) {
-      // Simply pass the ID of the review to delete
       deleteReview(checkedReview)
       setCheckedReview(null)
+    }
+  }
+
+  const navigateToEditReview = (reviewId) => {
+    // router.push("/search")
+    if (reviewId) {
+      // router.push("/search")
+      router.push(`/edit-review/${reviewId}`)
+    }
+  }
+
+  const handleEditButtonClick = () => {
+    // router.push("/search")
+    if (checkedReview !== null) {
+      // router.push("/search")
+      navigateToEditReview(checkedReview)
     }
   }
 
@@ -65,7 +80,7 @@ export default function MovieDiary() {
         <Card>
           <div className="flex justify-end mb-4 space-x-2">
             <Button onClick={handleSearchPageNavigation} className="text-white"><Icons.SquaresPlus /></Button>
-            <Button className="text-white"><Icons.Pencil /></Button>
+            <Button className="text-white" onClick={handleEditButtonClick}><Icons.Pencil /></Button>
             <Button className="text-white" onClick={handleDelete}><Icons.Trash /></Button>
             <Button className="text-white"><Icons.Filter /></Button>
             <Button className="text-white" onClick={handleSort}><Icons.ArrowUpDown /></Button>
@@ -102,7 +117,7 @@ export default function MovieDiary() {
                   ))}
                 </div>
                 <div className="text-center">
-                  <Button className="text-white"><Icons.ArrowUpRight /></Button>
+                  <Button className="text-white" onClick={() => navigateToEditReview(review.id)}><Icons.ArrowUpRight /></Button>
                 </div>
               </div>
             ))}

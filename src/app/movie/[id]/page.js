@@ -53,9 +53,9 @@ export default function MovieDetail() {
           {/* Close button */}
         </button>
 
-        <h1 className="text-2xl text-white text-center mb-6">
+        <h2 className="text-2xl text-white text-center mb-6">
           {movie.title} ({movie.year})
-        </h1>
+        </h2>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-shrink-0">
@@ -63,7 +63,7 @@ export default function MovieDetail() {
 
             <div className="flex justify-center mt-4">
               {[1, 2, 3, 4, 5].map((star) => (
-                <button key={star} onClick={() => setRating(star)} className="text-2xl">
+                <button key={star} onClick={() => setRating(star)} className="text-2xl cursor-pointer">
                   {star <= rating ? "★" : "☆"}
                 </button>
               ))}
@@ -75,10 +75,10 @@ export default function MovieDetail() {
               value={review}
               onChange={(e) => setReview(e.target.value)}
               placeholder="Write a review..."
-              className="w-full h-40 p-3 rounded-md bg-white/10 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 resize-none"
+              className="w-full h-65 p-3 rounded-md bg-white/10 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 resize-none"
             />
 
-            <button onClick={handleAddEntry} className="mt-4 px-6 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-full float-right">
+            <button onClick={handleAddEntry} className="mt-4 px-6 py-2 bg-pink-500 hover:bg-pink-600 cursor-pointer text-white rounded-full float-right">
               Add entry
             </button>
           </div>

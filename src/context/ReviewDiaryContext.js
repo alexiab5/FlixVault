@@ -41,6 +41,11 @@ export function ReviewDiaryProvider({ children }) {
     return limit ? sortedReviews.slice(0, limit) : sortedReviews
   }
 
+  const updateReview = (updatedReview) => {
+    setReviews((prevReviews) => prevReviews.map((review) => (review.id === updatedReview.id ? updatedReview : review)))
+  }
+
+
   return (
     <ReviewDiaryContext.Provider
       value={{
@@ -48,7 +53,8 @@ export function ReviewDiaryProvider({ children }) {
         addReview,
         deleteReview,
         sortReviews,
-        getSortedReviews
+        getSortedReviews,
+        updateReview
       }}
     >
       {children}
