@@ -28,33 +28,35 @@ const Button = ({ className, variant = 'ghost', children, ...props }) => {
 };
 
 export default function MovieDiary() {
-  const { reviews } = useReviewDiary(); // Use global state
-
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [checkedReview, setCheckedReview] = useState(null);
-  const [filtered, setFiltered] = useState(false);
-  const router = useRouter();
+  const { reviews, deleteReview, sortReviews } = useReviewDiary()
+  const [sortOrder, setSortOrder] = useState("desc")
+  const [checkedReview, setCheckedReview] = useState(null)
+  const router = useRouter()
 
   const handleRadioClick = (reviewId) => {
-    setCheckedReview(checkedReview === reviewId ? null : reviewId);
-  };
+    setCheckedReview(checkedReview === reviewId ? null : reviewId)
+  }
 
   const handleSearchPageNavigation = () => {
-    router.push('/search');
-  };
+    router.push("/search")
+  }
 
   const handleSort = () => {
-    const sortedReviews = [...reviews].sort((a, b) => {
-      const dateA = new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth(), a.day);
-      const dateB = new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth(), b.day);
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-    setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
-  };
+    // Toggle sort order
+    const newSortOrder = sortOrder === "desc" ? "asc" : "desc"
+    setSortOrder(newSortOrder)
 
-  const handleFilter = () => {
-    setFiltered(!filtered);
-  };
+    // Use the context's sortReviews function
+    sortReviews(newSortOrder)
+  }
+
+  const handleDelete = () => {
+    if (checkedReview !== null) {
+      // Simply pass the ID of the review to delete
+      deleteReview(checkedReview)
+      setCheckedReview(null)
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -64,8 +66,8 @@ export default function MovieDiary() {
           <div className="flex justify-end mb-4 space-x-2">
             <Button onClick={handleSearchPageNavigation} className="text-white"><Icons.SquaresPlus /></Button>
             <Button className="text-white"><Icons.Pencil /></Button>
-            <Button className="text-white"><Icons.Trash /></Button>
-            <Button className="text-white" onClick={handleFilter}><Icons.Filter /></Button>
+            <Button className="text-white" onClick={handleDelete}><Icons.Trash /></Button>
+            <Button className="text-white"><Icons.Filter /></Button>
             <Button className="text-white" onClick={handleSort}><Icons.ArrowUpDown /></Button>
           </div>
 
