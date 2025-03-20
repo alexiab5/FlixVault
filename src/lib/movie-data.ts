@@ -8,34 +8,34 @@ export interface Movie {
   
   // In-memory movie database
   export const movies: Movie[] = [
-    {
-      id: "glass-onion",
-      title: "Glass Onion",
-      year: 2022,
-      director: "Rian Johnson",
-      posterUrl: "/placeholder.svg?height=400&width=300",
-    },
-    {
-      id: "gladiator",
-      title: "Gladiator",
-      year: 2000,
-      director: "Ridley Scott",
-      posterUrl: "/placeholder.svg?height=400&width=300",
-    },
-    {
-      id: "gladiator-ii",
-      title: "Gladiator II",
-      year: 2024,
-      director: "Ridley Scott",
-      posterUrl: "/placeholder.svg?height=400&width=300",
-    },
-    {
-      id: "glass",
-      title: "Glass",
-      year: 2019,
-      director: "M. Night Shyamalan",
-      posterUrl: "/placeholder.svg?height=400&width=300",
-    },
+  {
+    id: "glass-onion",
+    title: "Glass Onion",
+    year: 2022,
+    director: "Rian Johnson",
+    posterUrl: "/images/movies/GlassOnion.jpg",
+  },
+  {
+    id: "gladiator",
+    title: "Gladiator",
+    year: 2000,
+    director: "Ridley Scott",
+    posterUrl: "/images/movies/Gladiator.jpg",
+  },
+  {
+    id: "gladiator-ii",
+    title: "Gladiator II",
+    year: 2024,
+    director: "Ridley Scott",
+    posterUrl: "/images/movies/GladiatorII.jpg",
+  },
+  {
+    id: "glass",
+    title: "Glass",
+    year: 2019,
+    director: "M. Night Shyamalan",
+    posterUrl: "/placeholder.svg",
+  },
   ]
   
   // Function to search movies by query
