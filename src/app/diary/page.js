@@ -5,8 +5,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import Icons from "@/components/Icons";
 import { useRouter } from 'next/navigation';
-import { useMovieDiary } from '../../context/MovieDiaryContext';
-
+import { useReviewDiary } from '../../context/ReviewDiaryContext';
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -28,25 +27,16 @@ const Button = ({ className, variant = 'ghost', children, ...props }) => {
   );
 };
 
-const movieData = [
-  { id: 1, year: 2025, month: 'MAR', day: '01', movie: 'Aftersun', poster: '/images/movies/Aftersun.jpg', released: 2022, rating: 5 },
-  { id: 2, year: 2025, month: 'FEBR', day: '13', movie: 'Challengers', poster: '/images/movies/Challengers.jpg', released: 2024, rating: 4 },
-  { id: 3, year: 2024, month: 'DEC', day: '20', movie: 'Anatomy of a Fall', poster: '/images/movies/Anatomy-of-a-Fall.jpg', released: 2023, rating: 4 },
-  { id: 4, year: 2024, month: 'DEC', day: '18', movie: 'The Holdovers', poster: '/images/movies/Holdovers.jpg', released: 2023, rating: 3 },
-];
-
 export default function MovieDiary() {
-
-  // const [movies, setMovies] = useState(movieData);
-  const { movies } = useMovieDiary(); // Use global state
+  const { reviews } = useReviewDiary(); // Use global state
 
   const [sortOrder, setSortOrder] = useState('desc');
-  const [checkedMovie, setCheckedMovie] = useState(null);
+  const [checkedReview, setCheckedReview] = useState(null);
   const [filtered, setFiltered] = useState(false);
   const router = useRouter();
 
-  const handleRadioClick = (movieId) => {
-    setCheckedMovie(checkedMovie === movieId ? null : movieId);
+  const handleRadioClick = (reviewId) => {
+    setCheckedReview(checkedReview === reviewId ? null : reviewId);
   };
 
   const handleSearchPageNavigation = () => {
@@ -54,38 +44,17 @@ export default function MovieDiary() {
   };
 
   const handleSort = () => {
-    const sortedMovies = [...movies].sort((a, b) => {
+    const sortedReviews = [...reviews].sort((a, b) => {
       const dateA = new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth(), a.day);
       const dateB = new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth(), b.day);
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
-    setMovies(sortedMovies);
     setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
   };
 
   const handleFilter = () => {
-    if (!filtered) {
-      setMovies(movieData.filter(movie => movie.rating == 4));
-    } else {
-      setMovies(movieData);
-    }
     setFiltered(!filtered);
   };
-
-  
-  // Toggle filter dropdown
-  const toggleFilter = () => {
-    setIsFilterOpen(!isFilterOpen)
-  }
-
-  // Toggle rating selection
-  const toggleRating = (rating) => {
-    if (selectedRatings.includes(rating)) {
-      setSelectedRatings(selectedRatings.filter((r) => r !== rating))
-    } else {
-      setSelectedRatings([...selectedRatings, rating])
-    }
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -111,23 +80,23 @@ export default function MovieDiary() {
           </div>
 
           <div className="max-h-[calc(7*4rem)] overflow-y-auto space-y-8">
-            {movies.map((movie) => (
-              <div key={movie.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
+            {reviews.map((review) => (
+              <div key={review.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
                 <div className="flex justify-center items-center">
-                  <div onClick={() => handleRadioClick(movie.id)} className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer">
-                    <Icons.RadioButton checked={checkedMovie === movie.id} />
+                  <div onClick={() => handleRadioClick(review.id)} className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer">
+                    <Icons.RadioButton checked={checkedReview === review.id} />
                   </div>
-                  <span>{movie.year}</span>
+                  <span>{review.year}</span>
                 </div>
-                <div className="text-center">{movie.month}</div>
-                <div className="text-center">{movie.day}</div>
+                <div className="text-center">{review.month}</div>
+                <div className="text-center">{review.day}</div>
                 <div className="flex justify-center">
-                  <Image src={movie.poster} alt={movie.movie} width={70} height={100} className="rounded-md" />
+                  <Image src={review.poster} alt={review.movie} width={70} height={100} className="rounded-md" />
                 </div>
-                <div className="text-center">{movie.released}</div>
+                <div className="text-center">{review.released}</div>
                 <div className="text-center flex justify-center">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className={i < movie.rating ? 'text-white' : 'text-white/30'}>★</span>
+                    <span key={i} className={i < review.rating ? 'text-white' : 'text-white/30'}>★</span>
                   ))}
                 </div>
                 <div className="text-center">

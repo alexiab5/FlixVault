@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts";
-import { useMovieDiary } from "../../../context/MovieDiaryContext";
+import { useReviewDiary } from "../../../context/ReviewDiaryContext";
 
 export default function MovieDetail() {
-  const { addMovie } = useMovieDiary(); // Get addMovie function from context
+  const { addReview } = useReviewDiary(); // Get addReview function from context
   const params = useParams();
   const router = useRouter();
   const [rating, setRating] = useState(0);
@@ -40,7 +40,7 @@ export default function MovieDetail() {
       review,
     };
 
-    addMovie(newEntry); // Add to in-memory state
+    addReview(newEntry); // Add to in-memory state
     router.push("/diary"); // Navigate to diary page
   };
 

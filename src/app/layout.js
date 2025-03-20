@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from '@/components/Header';
 import "./globals.css";
-import { MovieDiaryProvider } from "../context/MovieDiaryContext";
+import { ReviewDiaryProvider } from "../context/ReviewDiaryContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,12 +32,12 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="antialiased">
-        <MovieDiaryProvider> {/* Wrap in Provider */}
+        <ReviewDiaryProvider> {/* Wrap in Provider */}
           <div className="bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center h-screen flex items-center justify-center">
             <Header />
             {children}
           </div>
-        </MovieDiaryProvider>
+        </ReviewDiaryProvider>
       </body>
     </html>
   );
