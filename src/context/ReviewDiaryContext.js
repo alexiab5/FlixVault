@@ -31,6 +31,16 @@ export function ReviewDiaryProvider({ children }) {
     })
   }
 
+  const getSortedReviews = (order = "desc", limit = null) => {
+    const sortedReviews = [...reviews].sort((a, b) => {
+      const dateA = new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth(), a.day)
+      const dateB = new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth(), b.day)
+      return order === "desc" ? dateB - dateA : dateA - dateB
+    })
+
+    return limit ? sortedReviews.slice(0, limit) : sortedReviews
+  }
+
   return (
     <ReviewDiaryContext.Provider
       value={{
@@ -38,6 +48,7 @@ export function ReviewDiaryProvider({ children }) {
         addReview,
         deleteReview,
         sortReviews,
+        getSortedReviews
       }}
     >
       {children}
