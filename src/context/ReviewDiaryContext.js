@@ -45,6 +45,18 @@ export function ReviewDiaryProvider({ children }) {
     setReviews((prevReviews) => prevReviews.map((review) => (review.id === updatedReview.id ? updatedReview : review)))
   }
 
+  const filterReviewsByRating = (rating) => {
+    setCurrentFilter(rating)
+
+    if (rating === null) {
+      // If no filter, show all reviews
+      setFilteredReviews(reviews)
+    } else {
+      // Filter reviews by rating
+      const filtered = reviews.filter((review) => review.rating === rating)
+      setFilteredReviews(filtered)
+    }
+  }
 
   return (
     <ReviewDiaryContext.Provider
@@ -54,7 +66,8 @@ export function ReviewDiaryProvider({ children }) {
         deleteReview,
         sortReviews,
         getSortedReviews,
-        updateReview
+        updateReview,
+        filterReviewsByRating
       }}
     >
       {children}
