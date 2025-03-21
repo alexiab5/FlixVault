@@ -188,11 +188,11 @@ export default function MovieDiary() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-3">
+      <div className="text-center">
         <h2 className="text-2xl font-bold text-white mb-1">Your Diary</h2>
 
         <Card>
-          <div className="flex justify-end mb-4 space-x-2 relative">
+          <div className="flex justify-end space-x-2 relative">
             <Button onClick={handleSearchPageNavigation} className="text-white">
               <Icons.SquaresPlus />
             </Button>
@@ -296,7 +296,7 @@ export default function MovieDiary() {
             <div className="text-center">Review</div>
           </div>
 
-          <div className="max-h-[calc(4*4rem)] overflow-y-auto space-y-8">
+          <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-8">
             {currentReviews.length > 0 ? (
               currentReviews.map((review) => (
                 <div

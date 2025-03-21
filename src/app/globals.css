@@ -37,7 +37,7 @@ body::before {
 
 /* Add some padding to account for the fixed header */
 main {
-  padding-top: 4rem;
+  padding-top: 2rem;
 }
 
 
