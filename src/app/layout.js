@@ -31,12 +31,10 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"
         />
       </head>
-      <body className="antialiased">
+      <body className="h-full min-h-screen bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed overflow-x-hidden pt-16">
         <ReviewDiaryProvider> {/* Wrap in Provider */}
-          <div className="bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center h-screen flex items-center justify-center">
-            <Header />
-            {children}
-          </div>
+          <Header />
+          {children}
         </ReviewDiaryProvider>
       </body>
     </html>

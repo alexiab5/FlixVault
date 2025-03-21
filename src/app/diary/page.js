@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import clsx from "clsx"
 import Icons from "@/components/Icons"
 import { useRouter } from "next/navigation"
@@ -27,13 +27,47 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
   )
 }
 
+// Number of reviews to show per page
+const ITEMS_PER_PAGE = 4
+
 export default function MovieDiary() {
   const { reviews, deleteReview, sortReviews } = useReviewDiary()
   const [sortOrder, setSortOrder] = useState("desc")
   const [checkedReview, setCheckedReview] = useState(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [selectedRatings, setSelectedRatings] = useState([]) // Array of selected ratings
+  const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
+
+  // Find special reviews for highlighting
+  const specialReviews = useMemo(() => {
+    if (!reviews.length) return {}
+
+    // Sort by date (assuming year, month, day format)
+    const sortedByDate = [...reviews].sort((a, b) => {
+      const dateA = new Date(`${a.year}-${a.month}-${a.day}`)
+      const dateB = new Date(`${b.year}-${b.month}-${b.day}`)
+      return dateB - dateA // Most recent first
+    })
+
+    // Get most recent reviews for each rating
+    const mostRecent = {}
+    sortedByDate.forEach((review) => {
+      if (!mostRecent[review.rating]) {
+        mostRecent[review.rating] = review.id
+      }
+    })
+
+    // Get highest and lowest rated reviews
+    const highestRated = [...reviews].sort((a, b) => b.rating - a.rating)[0]?.id
+    const lowestRated = [...reviews].sort((a, b) => a.rating - b.rating)[0]?.id
+
+    return {
+      mostRecent,
+      highestRated,
+      lowestRated,
+    }
+  }, [reviews])
 
   const handleRadioClick = (reviewId) => {
     setCheckedReview(checkedReview === reviewId ? null : reviewId)
@@ -86,11 +120,15 @@ export default function MovieDiary() {
         return [...prevSelectedRatings, rating]
       }
     })
+
+    // Reset to first page when filter changes
+    setCurrentPage(1)
   }
 
   const clearFilter = () => {
     setSelectedRatings([])
     setShowFilterDropdown(false)
+    setCurrentPage(1) // Reset to first page
   }
 
   // Close dropdown when clicking outside
@@ -108,13 +146,51 @@ export default function MovieDiary() {
   }, [showFilterDropdown])
 
   // Filter reviews based on selected ratings
-  const filteredReviews =
-    selectedRatings.length === 0 ? reviews : reviews.filter((review) => selectedRatings.includes(review.rating))
+  const filteredReviews = useMemo(() => {
+    return selectedRatings.length === 0 ? reviews : reviews.filter((review) => selectedRatings.includes(review.rating))
+  }, [reviews, selectedRatings])
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE)
+
+  // Get current page reviews
+  const currentReviews = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredReviews.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredReviews, currentPage])
+
+  // Pagination handlers
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  // Get highlight class for a review
+  const getHighlightClass = (review) => {
+    if (specialReviews.highestRated === review.id) {
+      return "bg-green-500/20"
+    }
+    if (specialReviews.lowestRated === review.id) {
+      return "bg-red-500/20"
+    }
+    if (specialReviews.mostRecent && specialReviews.mostRecent[review.rating] === review.id) {
+      return "bg-blue-500/20"
+    }
+    return ""
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center mb-3">
         <h2 className="text-2xl font-bold text-white mb-1">Your Diary</h2>
+
         <Card>
           <div className="flex justify-end mb-4 space-x-2 relative">
             <Button onClick={handleSearchPageNavigation} className="text-white">
@@ -220,45 +296,116 @@ export default function MovieDiary() {
             <div className="text-center">Review</div>
           </div>
 
-          <div className="max-h-[calc(7*4rem)] overflow-y-auto space-y-8">
-            {filteredReviews.map((review) => (
-              <div key={review.id} className="grid grid-cols-7 items-center text-white border-b border-white/10 pb-8">
-                <div className="flex justify-center items-center">
-                  <div
-                    onClick={() => handleRadioClick(review.id)}
-                    className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer"
-                  >
-                    <Icons.RadioButton checked={checkedReview === review.id} />
+          <div className="max-h-[calc(4*4rem)] overflow-y-auto space-y-8">
+            {currentReviews.length > 0 ? (
+              currentReviews.map((review) => (
+                <div
+                  key={review.id}
+                  className={clsx(
+                    "grid grid-cols-7 items-center text-white border-b border-white/10 pb-8 rounded-lg transition-colors",
+                    getHighlightClass(review),
+                  )}
+                >
+                  <div className="flex justify-center items-center">
+                    <div
+                      onClick={() => handleRadioClick(review.id)}
+                      className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer"
+                    >
+                      <Icons.RadioButton checked={checkedReview === review.id} />
+                    </div>
+                    <span>{review.year}</span>
                   </div>
-                  <span>{review.year}</span>
+                  <div className="text-center">{review.month}</div>
+                  <div className="text-center">{review.day}</div>
+                  <div className="flex justify-center">
+                    <Image
+                      src={review.poster || "/placeholder.svg"}
+                      alt={review.movie}
+                      width={70}
+                      height={100}
+                      className="rounded-md"
+                    />
+                  </div>
+                  <div className="text-center">{review.released}</div>
+                  <div className="text-center flex justify-center">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} className={i < review.rating ? "text-white" : "text-white/30"}>
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-center">
+                    <Button className="text-white" onClick={() => navigateToEditReview(review.id)}>
+                      <Icons.ArrowUpRight />
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-center">{review.month}</div>
-                <div className="text-center">{review.day}</div>
-                <div className="flex justify-center">
-                  <Image
-                    src={review.poster || "/placeholder.svg"}
-                    alt={review.movie}
-                    width={70}
-                    height={100}
-                    className="rounded-md"
-                  />
-                </div>
-                <div className="text-center">{review.released}</div>
-                <div className="text-center flex justify-center">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className={i < review.rating ? "text-white" : "text-white/30"}>
-                      ★
-                    </span>
-                  ))}
-                </div>
-                <div className="text-center">
-                  <Button className="text-white" onClick={() => navigateToEditReview(review.id)}>
-                    <Icons.ArrowUpRight />
-                  </Button>
-                </div>
+              ))
+            ) : (
+              <div className="text-center text-white/70 py-8">
+                No reviews found. Try clearing your filters or add some reviews!
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredReviews.length > ITEMS_PER_PAGE && (
+            <div className="flex justify-between items-center mt-6 text-white border-t border-white/20 pt-4">
+              <Button
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+                className={clsx(
+                  "flex items-center",
+                  currentPage === 1 ? "text-white/30 cursor-not-allowed" : "text-white",
+                )}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-1"
+                >
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+                Previous
+              </Button>
+
+              <div className="text-sm">
+                Page {currentPage} of {totalPages}
+              </div>
+
+              <Button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={clsx(
+                  "flex items-center",
+                  currentPage === totalPages ? "text-white/30 cursor-not-allowed" : "text-white",
+                )}
+              >
+                Next
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="ml-1"
+                >
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </div>
