@@ -202,7 +202,7 @@ export default function MovieDiary() {
             <Button className="text-white" onClick={handleDelete}>
               <Icons.Trash />
             </Button>
-            <Button className="text-white filter-dropdown" onClick={handleFilterClick}>
+            <Button className="text-white filter-dropdown" onClick={handleFilterClick} aria-label="Filter">
               <Icons.Filter />
             </Button>
             <Button className="text-white" onClick={handleSort}>
@@ -219,6 +219,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(5)}
                       onChange={() => handleFilterByRating(5)}
+                      aria-label="5-star rating"
                     />
                     <span className="flex">★★★★★</span>
                   </label>
@@ -228,6 +229,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(4)}
                       onChange={() => handleFilterByRating(4)}
+                      aria-label="4-star rating"
                     />
                     <span className="flex">
                       ★★★★<span className="text-white/30">★</span>
@@ -239,6 +241,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(3)}
                       onChange={() => handleFilterByRating(3)}
+                      aria-label="3-star rating"
                     />
                     <span className="flex">
                       ★★★<span className="text-white/30">★★</span>
@@ -250,6 +253,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(2)}
                       onChange={() => handleFilterByRating(2)}
+                      aria-label="2-star rating"
                     />
                     <span className="flex">
                       ★★<span className="text-white/30">★★★</span>
@@ -261,6 +265,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(1)}
                       onChange={() => handleFilterByRating(1)}
+                      aria-label="1-star rating"
                     />
                     <span className="flex">
                       ★<span className="text-white/30">★★★★</span>
@@ -272,6 +277,7 @@ export default function MovieDiary() {
                       className="mr-2 h-4 w-4"
                       checked={selectedRatings.includes(0)}
                       onChange={() => handleFilterByRating(0)}
+                      aria-label="no rating"
                     />
                     <span>Not rated</span>
                   </label>

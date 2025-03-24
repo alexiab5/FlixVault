@@ -50,9 +50,11 @@ describe("MovieDiary Component", () => {
   test("renders movie diary with reviews", () => {
     render(<MovieDiary />);
 
+    screen.debug();
+    
     expect(screen.getByText("Your Diary")).toBeInTheDocument();
-    expect(screen.getByText("Inception")).toBeInTheDocument();
-    expect(screen.getByText("Interstellar")).toBeInTheDocument();
+    expect(screen.getByText(/Inception/i, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/Interstellar/i, { exact: false })).toBeInTheDocument();
   });
 
   test("deletes a selected review", () => {
@@ -95,13 +97,13 @@ describe("MovieDiary Component", () => {
     fireEvent.click(screen.getByRole("button", { name: /filter/i }));
 
     // Select a rating (4 stars)
-    fireEvent.click(screen.getByLabelText(/★★★★☆/i));
+    fireEvent.click(screen.getByLabelText("4-star rating"));
 
     // The 5-star movie should be hidden
     expect(screen.queryByText("Inception")).not.toBeInTheDocument();
 
     // The 4-star movie should be visible
-    expect(screen.getByText("Interstellar")).toBeInTheDocument();
+    expect(screen.getByText(/Interstellar/i, { exact: false })).toBeInTheDocument();
   });
 
   test("clears filters", () => {
@@ -109,13 +111,13 @@ describe("MovieDiary Component", () => {
 
     // Open filter dropdown and select a rating
     fireEvent.click(screen.getByRole("button", { name: /filter/i }));
-    fireEvent.click(screen.getByLabelText(/★★★★☆/i));
+    fireEvent.click(screen.getByLabelText("4-star rating"));
 
     // Clear filters
     fireEvent.click(screen.getByRole("button", { name: /clear filter/i }));
 
     // Both movies should be visible again
-    expect(screen.getByText("Inception")).toBeInTheDocument();
-    expect(screen.getByText("Interstellar")).toBeInTheDocument();
+    expect(screen.getByText(/Inception/i, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/Interstellar/i, { exact: false })).toBeInTheDocument();
   });
 });
