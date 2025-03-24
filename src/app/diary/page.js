@@ -31,7 +31,7 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
 const ITEMS_PER_PAGE = 4
 
 export default function MovieDiary() {
-  const { reviews, deleteReview, sortReviews } = useReviewDiary()
+  const { reviews, deleteReview, sortReviews, setReviews } = useReviewDiary()
   const [sortOrder, setSortOrder] = useState("desc")
   const [checkedReview, setCheckedReview] = useState(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
@@ -186,6 +186,12 @@ export default function MovieDiary() {
     return ""
   }
 
+  const resetReviews = () => {
+    setReviews([]);
+    localStorage.setItem("reviews", JSON.stringify([]));
+    // Reset any other state if needed
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
@@ -196,16 +202,16 @@ export default function MovieDiary() {
             <Button onClick={handleSearchPageNavigation} className="text-white">
               <Icons.SquaresPlus />
             </Button>
-            <Button className="text-white" onClick={handleEditButtonClick}>
+            <Button className="text-white" onClick={handleEditButtonClick} aria-label="Edit">
               <Icons.Pencil />
             </Button>
-            <Button className="text-white" onClick={handleDelete}>
+            <Button className="text-white" onClick={handleDelete} aria-label="Delete">
               <Icons.Trash />
             </Button>
             <Button className="text-white filter-dropdown" onClick={handleFilterClick} aria-label="Filter">
               <Icons.Filter />
             </Button>
-            <Button className="text-white" onClick={handleSort}>
+            <Button className="text-white" onClick={handleSort}  aria-label="Sort">
               <Icons.ArrowUpDown />
             </Button>
 
