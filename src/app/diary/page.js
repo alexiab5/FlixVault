@@ -50,22 +50,23 @@ export default function MovieDiary() {
       return dateB - dateA // Most recent first
     })
 
-    // Get most recent reviews for each rating
-    const mostRecent = {}
-    sortedByDate.forEach((review) => {
-      if (!mostRecent[review.rating]) {
-        mostRecent[review.rating] = review.id
-      }
-    })
+    // Get most recent reviews for specific ratings
+    const mostRecent5Star = sortedByDate.find(review => review.rating === 5)?.id
+    const mostRecent3Star = sortedByDate.find(review => review.rating === 3)?.id
+    const mostRecent1Star = sortedByDate.find(review => review.rating === 1)?.id
 
-    // Get highest and lowest rated reviews
-    const highestRated = [...reviews].sort((a, b) => b.rating - a.rating)[0]?.id
-    const lowestRated = [...reviews].sort((a, b) => a.rating - b.rating)[0]?.id
+    // Get most recently released movie
+    const mostRecentRelease = [...reviews].sort((a, b) => b.released - a.released)[0]?.id
+
+    // Get oldest movie in the collection
+    const oldestMovie = [...reviews].sort((a, b) => a.released - b.released)[0]?.id
 
     return {
-      mostRecent,
-      highestRated,
-      lowestRated,
+      mostRecent5Star,
+      mostRecent3Star,
+      mostRecent1Star,
+      mostRecentRelease,
+      oldestMovie
     }
   }, [reviews])
 
@@ -174,14 +175,20 @@ export default function MovieDiary() {
 
   // Get highlight class for a review
   const getHighlightClass = (review) => {
-    if (specialReviews.highestRated === review.id) {
-      return "bg-green-500/20"
+    if (specialReviews.mostRecent5Star === review.id) {
+      return "bg-green-500/20" // Most recent 5-star review
     }
-    if (specialReviews.lowestRated === review.id) {
-      return "bg-red-500/20"
+    if (specialReviews.mostRecent3Star === review.id) {
+      return "bg-yellow-500/20" // Most recent 3-star review
     }
-    if (specialReviews.mostRecent && specialReviews.mostRecent[review.rating] === review.id) {
-      return "bg-blue-500/20"
+    if (specialReviews.mostRecent1Star === review.id) {
+      return "bg-red-500/20" // Most recent 1-star review
+    }
+    if (specialReviews.mostRecentRelease === review.id) {
+      return "bg-blue-500/20" // Most recently released movie
+    }
+    if (specialReviews.oldestMovie === review.id) {
+      return "bg-purple-500/20" // Oldest movie in collection
     }
     return ""
   }
