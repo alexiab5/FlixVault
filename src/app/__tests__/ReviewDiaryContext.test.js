@@ -1,56 +1,10 @@
 import { renderHook, act } from "@testing-library/react";
 import { ReviewDiaryProvider, useReviewDiary } from "../../context/ReviewDiaryContext";
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => {
-      store[key] = value.toString();
-    },
-    clear: () => {
-      store = {};
-    },
-    removeItem: (key) => {
-      delete store[key];
-    }
-  };
-})();
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
-});
-
 describe("ReviewDiaryContext", () => {
-  const mockReviews = [
-    {
-      id: 1,
-      year: 2024,
-      month: "March",
-      day: 15,
-      movie: "Inception",
-      released: 2010,
-      rating: 5,
-      poster: "/inception.jpg",
-    },
-    {
-      id: 2,
-      year: 2023,
-      month: "July",
-      day: 8,
-      movie: "Interstellar",
-      released: 2014,
-      rating: 4,
-      poster: "/interstellar.jpg",
-    },
-  ];
-
   const wrapper = ({ children }) => <ReviewDiaryProvider initialReviews={[]}>{children}</ReviewDiaryProvider>;
 
-  // Clean up localStorage and reset context before each test
   beforeEach(() => {
-    localStorage.clear();
     // Reset the context state before each test
     const { result } = renderHook(() => useReviewDiary(), { wrapper });
     act(() => {
@@ -281,61 +235,6 @@ describe("ReviewDiaryContext", () => {
     });
 
     expect(result.current.filteredReviews).toHaveLength(3);
-  });
-
-  test("should persist reviews in localStorage", () => {
-    const { result } = renderHook(() => useReviewDiary(), { wrapper });
-    const mockReviews = [
-      {
-        id: 1,
-        movie: "Inception",
-        rating: 5,
-        year: 2024,
-        month: "March",
-        day: 15,
-        released: 2010,
-        poster: "/inception.jpg",
-      },
-    ];
-
-    act(() => {
-      mockReviews.forEach((review) => result.current.addReview(review));
-    });
-
-    // Check localStorage
-    const storedReviews = JSON.parse(localStorage.getItem("reviews"));
-    expect(storedReviews).toHaveLength(1);
-    expect(storedReviews[0]).toEqual(mockReviews[0]);
-  });
-
-  test("should load reviews from localStorage on initialization", () => {
-    const mockReviews = [
-      {
-        id: 1,
-        movie: "Inception",
-        rating: 5,
-        year: 2024,
-        month: "March",
-        day: 15,
-        released: 2010,
-        poster: "/inception.jpg",
-      },
-      {
-        id: 2,
-        movie: "Interstellar",
-        rating: 4,
-        year: 2023,
-        month: "July",
-        day: 8,
-        released: 2014,
-        poster: "/interstellar.jpg",
-      },
-    ];
-
-    localStorage.setItem("reviews", JSON.stringify(mockReviews));
-    const { result } = renderHook(() => useReviewDiary(), { wrapper });
-
-    expect(result.current.reviews).toEqual(mockReviews);
   });
 
   test("should handle invalid review data", () => {

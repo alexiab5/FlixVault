@@ -8,14 +8,14 @@ const ReviewDiaryContext = createContext()
 const isValidReview = (review) => {
   return (
     review &&
-    typeof review.id === "number" &&
-    typeof review.movie === "string" &&
-    typeof review.rating === "number" &&
-    typeof review.year === "number" &&
-    typeof review.month === "string" &&
-    typeof review.day === "number" &&
-    typeof review.released === "number" &&
-    typeof review.poster === "string"
+    review.id &&
+    review.movie &&
+    review.rating &&
+    review.year &&
+    review.month &&
+    review.day &&
+    review.released &&
+    review.poster
   )
 }
 
@@ -24,29 +24,13 @@ export function ReviewDiaryProvider({ children, initialReviews = movieReviews })
   const [currentFilter, setCurrentFilter] = useState(null)
   const [filteredReviews, setFilteredReviews] = useState([])
 
-  // Load reviews from localStorage on mount
+  // Only set initial reviews once when the component mounts
   useEffect(() => {
-    const storedReviews = localStorage.getItem("reviews")
-    if (storedReviews) {
-      try {
-        const parsedReviews = JSON.parse(storedReviews)
-        if (Array.isArray(parsedReviews)) {
-          setReviews(parsedReviews)
-          setFilteredReviews(parsedReviews)
-        }
-      } catch (error) {
-        console.error("Error loading reviews from localStorage:", error)
-      }
-    } else {
+    if (reviews.length === 0) {
       setReviews(initialReviews)
       setFilteredReviews(initialReviews)
     }
-  }, [initialReviews])
-
-  // Save reviews to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("reviews", JSON.stringify(reviews))
-  }, [reviews])
+  }, []) // Empty dependency array means this only runs once on mount
 
   const addReview = (newReview) => {
     if (!isValidReview(newReview)) {
@@ -109,7 +93,6 @@ export function ReviewDiaryProvider({ children, initialReviews = movieReviews })
     setReviews([])
     setFilteredReviews([])
     setCurrentFilter(null)
-    localStorage.removeItem("reviews")
   }
 
   return (
