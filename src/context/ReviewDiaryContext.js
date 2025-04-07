@@ -1,98 +1,176 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import movieReviews from "../lib/reviews"
+import { reviewApiService } from "../services/reviewApiService"
 
 const ReviewDiaryContext = createContext()
 
-const isValidReview = (review) => {
-  return (
-    review &&
-    review.id &&
-    review.movie &&
-    review.rating &&
-    review.year &&
-    review.month &&
-    review.day &&
-    review.released &&
-    review.poster
-  )
-}
-
-export function ReviewDiaryProvider({ children, initialReviews = movieReviews }) {
+export function ReviewDiaryProvider({ children }) {
   const [reviews, setReviews] = useState([])
   const [currentFilter, setCurrentFilter] = useState(null)
   const [filteredReviews, setFilteredReviews] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Only set initial reviews once when the component mounts
+  // Fetch reviews when the component mounts
   useEffect(() => {
-    if (reviews.length === 0) {
-      setReviews(initialReviews)
-      setFilteredReviews(initialReviews)
+    const fetchReviews = async () => {
+      try {
+        setIsLoading(true)
+        const fetchedReviews = await reviewApiService.getAllReviews()
+        setReviews(fetchedReviews)
+        setFilteredReviews(fetchedReviews)
+        setError(null)
+      } catch (err) {
+        console.error("Error fetching reviews:", err)
+        setError("Failed to load reviews")
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, []) // Empty dependency array means this only runs once on mount
 
-  const addReview = (newReview) => {
-    if (!isValidReview(newReview)) {
-      console.error("Invalid review data:", newReview)
-      return
+    fetchReviews()
+  }, [])
+
+  const addReview = async (newReview) => {
+    try {
+      setIsLoading(true)
+      const addedReview = await reviewApiService.addReview(newReview)
+      
+      // Update the local state with the new review
+      setReviews((prevReviews) => [addedReview, ...prevReviews])
+      
+      // Update filtered reviews if necessary
+      if (currentFilter === null || currentFilter === addedReview.rating) {
+        setFilteredReviews((prevReviews) => [addedReview, ...prevReviews])
+      }
+      
+      setError(null)
+      return addedReview
+    } catch (err) {
+      console.error("Error adding review:", err)
+      setError("Failed to add review")
+      throw err
+    } finally {
+      setIsLoading(false)
     }
-    setReviews((prevReviews) => [newReview, ...prevReviews])
-    setFilteredReviews((prevReviews) => [newReview, ...prevReviews])
   }
 
-  const deleteReview = (reviewId) => {
-    setReviews((prevReviews) => prevReviews.filter((review) => review.id !== reviewId))
-    setFilteredReviews((prevReviews) => prevReviews.filter((review) => review.id !== reviewId))
+  const deleteReview = async (reviewId) => {
+    try {
+      setIsLoading(true)
+      await reviewApiService.deleteReview(reviewId)
+      
+      // Update local state
+      setReviews((prevReviews) => prevReviews.filter((review) => review.id !== reviewId))
+      setFilteredReviews((prevReviews) => prevReviews.filter((review) => review.id !== reviewId))
+      
+      setError(null)
+    } catch (err) {
+      console.error("Error deleting review:", err)
+      setError("Failed to delete review")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const sortReviews = (order) => {
-    setReviews((prevReviews) => {
-      const sortedReviews = [...prevReviews].sort((a, b) => {
-        const dateA = new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth(), a.day)
-        const dateB = new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth(), b.day)
-        return order === "desc" ? dateB - dateA : dateA - dateB
-      })
+  const updateReview = async (updatedReview) => {
+    try {
+      setIsLoading(true)
+      const result = await reviewApiService.updateReview(updatedReview)
+      
+      // Update local state
+      setReviews((prevReviews) => 
+        prevReviews.map((review) => (review.id === updatedReview.id ? result : review))
+      )
+      
+      // Update filtered reviews if necessary
+      if (currentFilter === null || currentFilter === updatedReview.rating) {
+        setFilteredReviews((prevReviews) => 
+          prevReviews.map((review) => (review.id === updatedReview.id ? result : review))
+        )
+      } else {
+        // If the rating changed and it no longer matches the filter, remove from filtered list
+        setFilteredReviews((prevReviews) => 
+          prevReviews.filter((review) => review.id !== updatedReview.id)
+        )
+      }
+      
+      setError(null)
+      return result
+    } catch (err) {
+      console.error("Error updating review:", err)
+      setError("Failed to update review")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const filterReviewsByRating = async (rating) => {
+    try {
+      setIsLoading(true)
+      setCurrentFilter(rating)
+      
+      const fetchedReviews = await reviewApiService.getAllReviews(rating)
+      setFilteredReviews(fetchedReviews)
+      
+      setError(null)
+    } catch (err) {
+      console.error("Error filtering reviews:", err)
+      setError("Failed to filter reviews")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getSortedReviews = async (order = "desc", limit = null) => {
+    try {
+      setIsLoading(true)
+      const sortedReviews = await reviewApiService.getAllReviews(currentFilter, order, limit)
+      setError(null)
       return sortedReviews
-    })
-  }
-
-  const getSortedReviews = (order = "desc", limit = null) => {
-    const sortedReviews = [...reviews].sort((a, b) => {
-      const dateA = new Date(a.year, new Date(Date.parse(a.month + " 1, 2000")).getMonth(), a.day)
-      const dateB = new Date(b.year, new Date(Date.parse(b.month + " 1, 2000")).getMonth(), b.day)
-      return order === "desc" ? dateB - dateA : dateA - dateB
-    })
-
-    return limit ? sortedReviews.slice(0, limit) : sortedReviews
-  }
-
-  const updateReview = (updatedReview) => {
-    if (!isValidReview(updatedReview)) {
-      console.error("Invalid review data:", updatedReview)
-      return
-    }
-    setReviews((prevReviews) => prevReviews.map((review) => (review.id === updatedReview.id ? updatedReview : review)))
-    setFilteredReviews((prevReviews) => prevReviews.map((review) => (review.id === updatedReview.id ? updatedReview : review)))
-  }
-
-  const filterReviewsByRating = (rating) => {
-    setCurrentFilter(rating)
-
-    if (rating === null) {
-      // If no filter, show all reviews
-      setFilteredReviews(reviews)
-    } else {
-      // Filter reviews by rating
-      const filtered = reviews.filter((review) => review.rating === rating)
-      setFilteredReviews(filtered)
+    } catch (err) {
+      console.error("Error sorting reviews:", err)
+      setError("Failed to get sorted reviews")
+      return []
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const resetReviews = () => {
-    setReviews([])
-    setFilteredReviews([])
-    setCurrentFilter(null)
+  const sortReviews = async (order) => {
+    try {
+      setIsLoading(true)
+      const sortedReviews = await reviewApiService.getAllReviews(currentFilter, order)
+      setReviews(sortedReviews)
+      setFilteredReviews(sortedReviews)
+      setError(null)
+    } catch (err) {
+      console.error("Error sorting reviews:", err)
+      setError("Failed to sort reviews")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const resetReviews = async () => {
+    try {
+      setIsLoading(true)
+      await reviewApiService.resetReviews()
+      const freshReviews = await reviewApiService.getAllReviews()
+      
+      setReviews(freshReviews)
+      setFilteredReviews(freshReviews)
+      setCurrentFilter(null)
+      setError(null)
+    } catch (err) {
+      console.error("Error resetting reviews:", err)
+      setError("Failed to reset reviews")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -106,7 +184,9 @@ export function ReviewDiaryProvider({ children, initialReviews = movieReviews })
         getSortedReviews,
         updateReview,
         filterReviewsByRating,
-        resetReviews
+        resetReviews,
+        isLoading,
+        error
       }}
     >
       {children}
