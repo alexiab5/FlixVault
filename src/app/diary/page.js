@@ -94,8 +94,9 @@ export default function MovieDiary() {
     }
   }
 
-  const navigateToEditReview = (reviewId) => {
+  const navigateToEditReview = (e, reviewId) => {
     if (reviewId) {
+      e.preventDefault(); // This is crucial! ensures the application uses client-side navigation rather than making HTTP requests!!!!!
       router.push(`/edit-review/${reviewId}`)
     }
   }
@@ -348,7 +349,7 @@ export default function MovieDiary() {
                     ))}
                   </div>
                   <div className="text-center">
-                    <Button className="text-white" onClick={() => navigateToEditReview(review.id)}>
+                    <Button className="text-white" onClick={(e) => navigateToEditReview(e, review.id)}>
                       <Icons.ArrowUpRight />
                     </Button>
                   </div>

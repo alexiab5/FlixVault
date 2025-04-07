@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from '@/components/Header';
+import OfflineStatusBanner from '@/components/OfflineStatusBanner';
 import "./globals.css";
 import { ReviewDiaryProvider } from "../context/ReviewDiaryContext";
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="h-full min-h-screen bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed overflow-x-hidden pt-16">
         <ReviewDiaryProvider> {/* Wrap in Provider */}
+          <OfflineStatusBanner />
           <Header />
           {children}
         </ReviewDiaryProvider>

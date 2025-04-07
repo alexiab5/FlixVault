@@ -14,17 +14,25 @@ export default function EditReview() {
   const router = useRouter()
 
   useEffect(() => {
-    // Find the review with the matching ID
-    const foundReview = reviews.find((r) => r.id == id)
+    const foundReview = reviews.find((r) => r.id == id);
     if (foundReview) {
-      setReview(foundReview)
-      setReviewText(foundReview.review || "")
-      setRating(foundReview.rating || 0)
+      setReview(foundReview);
+      setReviewText(foundReview.review || "");
+      setRating(foundReview.rating || 0);
     } else {
-      // If no review is found, redirect back to the diary
-      router.push("/diary")
+      // Check local storage if no review is found
+      const cachedReviews = JSON.parse(localStorage.getItem('cachedReviews')) || [];
+      const cachedReview = cachedReviews.find((r) => r.id == id);
+      if (cachedReview) {
+        setReview(cachedReview);
+        setReviewText(cachedReview.review || "");
+        setRating(cachedReview.rating || 0);
+      } else {
+        // If no review is found, redirect back to the diary
+        router.push("/diary");
+      }
     }
-  }, [id, reviews, router])
+  }, [id, reviews, router]);
 
   const handleSave = () => {
     if (review) {
