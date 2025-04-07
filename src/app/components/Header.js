@@ -40,9 +40,6 @@ export default function Header() {
             <Link href="/diary" className="hover:underline">
                 Diary
             </Link>
-            <Link href="/lists" className="hover:underline">
-                Lists
-            </Link>
             <Link href="/statistics" className="hover:underline">
                 Statistics
             </Link>

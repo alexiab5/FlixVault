@@ -12,13 +12,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center">
+    <div className="h-screen flex flex-col items-center justify-center text-center px-4">
+      <h1 className="text-4xl font-bold text-white mb-4">Welcome to FlixVault!</h1>
+      <p className="text-lg text-white mb-6">Lights, camera, action – your movie diary awaits!</p>
 
-    <h1 className="text-4xl font-bold text-white mb-4">Welcome to FlixVault!</h1>
-    <p className="text-lg text-white mb-6">Lights, camera, action – your movie diary awaits!</p>
-
-    <RegularButton text="Create an account" onClick={handleClick}>
-    </RegularButton>
-  </div>
+      <RegularButton text="Create an account" onClick={handleClick}>
+      </RegularButton>
+    </div>
   );
 }
