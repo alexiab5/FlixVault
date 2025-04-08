@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import clsx from "clsx"
 import Icons from "@/components/Icons"
@@ -10,6 +10,7 @@ import { useReviewDiary } from "../../context/ReviewDiaryContext"
 import EditReviewModal from "@/components/EditReviewModal"
 import AddReviewModal from "@/components/AddReviewModal"
 import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts";
+import { generateReview } from "../../lib/clientReviewGenerator.js";
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -35,17 +36,64 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
 const ITEMS_PER_PAGE = 4
 
 export default function MovieDiary() {
-  const { reviews, deleteReview, sortReviews, setReviews } = useReviewDiary()
+  const { reviews, deleteReview, sortReviews, setReviews, addReview } = useReviewDiary()
   const [sortOrder, setSortOrder] = useState("desc")
   const [checkedReview, setCheckedReview] = useState(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [selectedRatings, setSelectedRatings] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
+  const [visibleItems, setVisibleItems] = useState(ITEMS_PER_PAGE)
+  const [isLoading, setIsLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [isGeneratingReviews, setIsGeneratingReviews] = useState(false)
+  const [reviewCount, setReviewCount] = useState(0)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   const [editingReview, setEditingReview] = useState(null)
   const [selectedMovie, setSelectedMovie] = useState(null)
   const searchParams = useSearchParams()
   const router = useRouter()
+
+  // Generate multiple random reviews for testing the sliding window
+  const generateMultipleReviews = useCallback(async (count = 50) => {
+    if (isGeneratingReviews) return;
+    
+    setIsGeneratingReviews(true);
+    setReviewCount(0);
+    
+    console.log(`Generating ${count} random reviews for testing...`);
+    
+    // Track existing IDs to avoid duplicates
+    const existingIds = new Set(reviews.map(review => review.id));
+    
+    for (let i = 0; i < count; i++) {
+      const newReview = generateReview();
+      
+      // Skip if we already have a review with this ID
+      if (existingIds.has(newReview.id)) {
+        console.log(`Skipping duplicate review with ID: ${newReview.id}`);
+        continue;
+      }
+      
+      // Add to existing IDs set
+      existingIds.add(newReview.id);
+      
+      // Add a small delay to avoid overwhelming the UI
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await addReview(newReview);
+      setReviewCount(prev => prev + 1);
+    }
+    
+    setIsGeneratingReviews(false);
+    console.log(`Generated ${reviewCount} random reviews successfully`);
+  }, [isGeneratingReviews, addReview, reviews, reviewCount]);
+
+  // Generate reviews when the page is first loaded
+  // useEffect(() => {
+  //   // Only generate reviews if there are fewer than 20 reviews
+  //   if (reviews.length < 20) {
+  //     generateMultipleReviews(50);
+  //   }
+  // }, [reviews.length, generateMultipleReviews]);
 
   // Check for a selected movie in the URL parameters when the component mounts
   useEffect(() => {
@@ -184,13 +232,13 @@ export default function MovieDiary() {
     })
 
     // Reset to first page when filter changes
-    setCurrentPage(1)
+    setVisibleItems(ITEMS_PER_PAGE)
   }
 
   const clearFilter = () => {
     setSelectedRatings([])
     setShowFilterDropdown(false)
-    setCurrentPage(1) // Reset to first page
+    setVisibleItems(ITEMS_PER_PAGE) // Reset to first page
   }
 
   // Close dropdown when clicking outside
@@ -212,27 +260,50 @@ export default function MovieDiary() {
     return selectedRatings.length === 0 ? reviews : reviews.filter((review) => selectedRatings.includes(review.rating))
   }, [reviews, selectedRatings])
 
-  // Calculate total pages
-  const totalPages = Math.ceil(filteredReviews.length / ITEMS_PER_PAGE)
+  // Get visible reviews for the current scroll position
+  const visibleReviews = useMemo(() => {
+    return filteredReviews.slice(0, visibleItems)
+  }, [filteredReviews, visibleItems])
 
-  // Get current page reviews
-  const currentReviews = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredReviews.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [filteredReviews, currentPage])
+  // Check if there are more reviews to load
+  useEffect(() => {
+    setHasMore(visibleItems < filteredReviews.length)
+  }, [visibleItems, filteredReviews.length])
 
-  // Pagination handlers
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1)
+  // Handle scroll event to load more reviews
+  const handleScroll = useCallback(() => {
+    if (isLoading || !hasMore) return
+
+    // Get the container element
+    const container = document.querySelector('.reviews-container');
+    if (!container) return;
+
+    // Check if we're near the bottom of the container
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+    if (isNearBottom) {
+      setIsLoading(true);
+      
+      // Load more items immediately without delay
+      setVisibleItems(prev => prev + ITEMS_PER_PAGE);
+      setIsLoading(false);
     }
-  }
+  }, [isLoading, hasMore]);
 
-  const goToPrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1)
-    }
-  }
+  // Add scroll event listener to the container
+  useEffect(() => {
+    const container = document.querySelector('.reviews-container');
+    if (!container) return;
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Reset visible items when filters change
+  useEffect(() => {
+    setVisibleItems(ITEMS_PER_PAGE);
+  }, [selectedRatings]);
 
   // Get highlight class for a review
   const getHighlightClass = (review) => {
@@ -258,6 +329,60 @@ export default function MovieDiary() {
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-white mb-1">Your Diary</h2>
+        
+        {/* Add a button to manually generate more reviews */}
+        <div className="mb-4">
+          <Button 
+            onClick={() => generateMultipleReviews(20)} 
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-2"
+            disabled={isGeneratingReviews}
+          >
+            {isGeneratingReviews ? `Generating Reviews (${reviewCount})...` : 'Generate More Reviews'}
+          </Button>
+          
+          <Button 
+            onClick={() => setShowDebugPanel(!showDebugPanel)} 
+            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+          >
+            {showDebugPanel ? 'Hide Debug Panel' : 'Show Debug Panel'}
+          </Button>
+        </div>
+        
+        {/* Debug Panel */}
+        {showDebugPanel && (
+          <div className="mb-4 p-4 bg-gray-800 rounded-lg text-left text-white text-sm">
+            <h3 className="font-bold mb-2">Sliding Window Debug Info</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div>Total Reviews:</div>
+              <div>{filteredReviews.length}</div>
+              
+              <div>Visible Items:</div>
+              <div>{visibleItems}</div>
+              
+              <div>Has More:</div>
+              <div>{hasMore ? 'Yes' : 'No'}</div>
+              
+              <div>Is Loading:</div>
+              <div>{isLoading ? 'Yes' : 'No'}</div>
+              
+              <div>Items Per Page:</div>
+              <div>{ITEMS_PER_PAGE}</div>
+            </div>
+            
+            <div className="mt-4">
+              <h4 className="font-bold mb-1">Sliding Window Visualization:</h4>
+              <div className="w-full bg-gray-700 h-6 rounded-full overflow-hidden">
+                <div 
+                  className="bg-blue-500 h-full" 
+                  style={{ width: `${Math.min(100, (visibleItems / filteredReviews.length) * 100)}%` }}
+                ></div>
+              </div>
+              <div className="text-xs mt-1 text-gray-400">
+                Showing {visibleItems} of {filteredReviews.length} items
+              </div>
+            </div>
+          </div>
+        )}
 
         <Card>
           <div className="flex justify-end space-x-2 relative">
@@ -370,9 +495,9 @@ export default function MovieDiary() {
             <div className="text-center">Review</div>
           </div>
 
-          <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-8">
-            {currentReviews.length > 0 ? (
-              currentReviews.map((review) => (
+          <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-8 reviews-container">
+            {visibleReviews.length > 0 ? (
+              visibleReviews.map((review) => (
                 <div
                   key={review.id}
                   className={clsx(
@@ -425,66 +550,26 @@ export default function MovieDiary() {
                 No reviews found. Try clearing your filters or add some reviews!
               </div>
             )}
-          </div>
-
-          {/* Pagination Controls */}
-          {filteredReviews.length > ITEMS_PER_PAGE && (
-            <div className="flex justify-between items-center mt-6 text-white border-t border-white/20 pt-4">
-              <Button
-                onClick={goToPrevPage}
-                disabled={currentPage === 1}
-                className={clsx(
-                  "flex items-center",
-                  currentPage === 1 ? "text-white/30 cursor-not-allowed" : "text-white",
-                )}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1"
-                >
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-                Previous
-              </Button>
-
-              <div className="text-sm">
-                Page {currentPage} of {totalPages}
+            
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
               </div>
-
-              <Button
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className={clsx(
-                  "flex items-center",
-                  currentPage === totalPages ? "text-white/30 cursor-not-allowed" : "text-white",
-                )}
-              >
-                Next
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="ml-1"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </Button>
+            )}
+            
+            {/* End of list indicator */}
+            {!hasMore && visibleReviews.length > 0 && (
+              <div className="text-center text-white/50 py-4">
+                No more reviews to load
+              </div>
+            )}
+            
+            {/* Sliding window indicator */}
+            <div className="text-center text-white/70 py-2 text-sm">
+              Showing {visibleReviews.length} of {filteredReviews.length} reviews
             </div>
-          )}
+          </div>
         </Card>
 
         {/* Modal for editing reviews - moved OUTSIDE the Card */}

@@ -1,5 +1,5 @@
-import { getSocketIO, calculateReviewStats } from './socket-handler.js';
-import { reviewsStore } from '../lib/apiStore.js';
+// Client-side review generator
+// This is a simplified version that doesn't depend on server-side modules
 
 // Sample movie database
 const movieDatabase = [
@@ -41,6 +41,9 @@ const elements = [
   'visual effects', 'character development', 'storytelling', 'editing', 'production design'
 ];
 
+// Counter for generating unique IDs
+let idCounter = 0;
+
 // Generate random review
 export function generateReview() {
   const movie = movieDatabase[Math.floor(Math.random() * movieDatabase.length)];
@@ -56,9 +59,15 @@ export function generateReview() {
   const now = new Date();
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
   
+  // Create a truly unique ID using multiple components
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000000);
+  idCounter++;
+  const uniqueId = `${timestamp}-${random}-${idCounter}`;
+  
   // Create review object
   const review = {
-    id: Date.now(), // Use timestamp as ID
+    id: uniqueId,
     year: now.getFullYear(),
     month: months[now.getMonth()],
     day: String(now.getDate()).padStart(2, '0'),
@@ -70,45 +79,4 @@ export function generateReview() {
   };
   
   return review;
-}
-
-// Start the generator
-let generatorInterval = null;
-
-export function startReviewGenerator(intervalMs = 30000) {
-  // Clear any existing interval
-  if (generatorInterval) {
-    clearInterval(generatorInterval);
-  }
-  
-  generatorInterval = setInterval(() => {
-    try {
-      const newReview = generateReview();
-      console.log(`Generated new review for "${newReview.movie}"`);
-      
-      // Add to store
-      reviewsStore.add(newReview);
-      
-      // Broadcast to clients
-      const io = getSocketIO();
-      io.emit('newReview', newReview);
-      
-      // Update and broadcast stats
-      const stats = calculateReviewStats(reviewsStore.getAll());
-      io.emit('reviewStats', stats);
-    } catch (error) {
-      console.error('Error generating review:', error);
-    }
-  }, intervalMs);
-  
-  console.log(`Review generator started, generating every ${intervalMs/1000} seconds`);
-  return generatorInterval;
-}
-
-export function stopReviewGenerator() {
-  if (generatorInterval) {
-    clearInterval(generatorInterval);
-    generatorInterval = null;
-    console.log('Review generator stopped');
-  }
-}
+} 
