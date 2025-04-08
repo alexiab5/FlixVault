@@ -2,11 +2,14 @@
 
 import Image from "next/image"
 import { useState, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import clsx from "clsx"
 import Icons from "@/components/Icons"
 import { useRouter } from "next/navigation"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 import EditReviewModal from "@/components/EditReviewModal"
+import AddReviewModal from "@/components/AddReviewModal"
+import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts";
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -36,10 +39,42 @@ export default function MovieDiary() {
   const [sortOrder, setSortOrder] = useState("desc")
   const [checkedReview, setCheckedReview] = useState(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-  const [selectedRatings, setSelectedRatings] = useState([]) // Array of selected ratings
+  const [selectedRatings, setSelectedRatings] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
+
   const [editingReview, setEditingReview] = useState(null)
+  const [selectedMovie, setSelectedMovie] = useState(null)
+  const searchParams = useSearchParams()
   const router = useRouter()
+
+  // Check for a selected movie in the URL parameters when the component mounts
+  useEffect(() => {
+    const movieParam = searchParams.get("selectedMovie")
+    if (movieParam) {
+      try {
+        // For a string ID
+        if (movieParam.startsWith('"') && movieParam.endsWith('"')) {
+          // It's just an ID string, we need to fetch the movie data
+          const movieId = JSON.parse(movieParam)
+          // Fetch the movie data based on ID (simplified example)
+          console.log("movie id:", movieId);
+          const movie = getMovieById(movieId);
+          if (movie) {
+            setSelectedMovie(movie)
+          }
+          console.log("selected movie:", movie.title);
+        } 
+      } catch (error) {
+        console.error("Error parsing movie data:", error)
+      }
+    }
+  }, [searchParams])
+
+  const closeAddModal = () => {
+    setSelectedMovie(null)
+    // Clear the URL parameter when closing the modal
+    router.replace("/diary")
+  }
 
   // Find special reviews for highlighting
   const specialReviews = useMemo(() => {
@@ -454,6 +489,7 @@ export default function MovieDiary() {
 
         {/* Modal for editing reviews - moved OUTSIDE the Card */}
         {editingReview && <EditReviewModal review={editingReview} onClose={closeEditModal} onSave={handleSaveReview} />}
+        {selectedMovie && <AddReviewModal movie={selectedMovie} onClose={closeAddModal} />}
       </div>
     </div>
   )

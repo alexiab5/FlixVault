@@ -77,10 +77,15 @@ export function SearchBar() {
     }
   }, [query]);
 
+  // const handleSelectMovie = (movieId) => {
+  //   setIsOpen(false);
+  //   router.push(`/movie/${movieId}`);
+  // };
+
   const handleSelectMovie = (movieId) => {
-    setIsOpen(false);
-    router.push(`/movie/${movieId}`);
-  };
+    setIsOpen(false)
+    router.push(`/diary?selectedMovie="${movieId}"`)
+  }
 
   return (
     <div className="w-full max-w-md mx-auto relative" ref={searchRef}>
