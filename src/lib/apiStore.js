@@ -1,5 +1,5 @@
 // This file provides a consistent in-memory store for the API routes
-import movieReviews from './reviews';
+import movieReviews from './reviews.js';
 
 // Create a module-scoped variable to store the reviews
 let reviews = [...movieReviews];

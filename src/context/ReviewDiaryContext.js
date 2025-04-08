@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import { reviewApiService } from "../services/reviewApiService"
+import reviewApiService from "../services/reviewApiService"
 
 const ReviewDiaryContext = createContext()
 
@@ -167,6 +167,42 @@ export function ReviewDiaryProvider({ children }) {
       window.removeEventListener('online', handleOnline);
     };
   }, []);
+
+  // WebSocket connection and handlers
+  useEffect(() => {
+    // Only connect to WebSocket if online and server is up
+    if (!isNetworkDown && !isServerDown) {
+      console.log("Setting up WebSocket connection");
+      
+      // Listen for new reviews
+      const removeNewReviewListener = reviewApiService.onNewReview((newReview) => {
+        console.log("Received new review via WebSocket:", newReview);
+        setReviews(prevReviews => {
+          // Check if review already exists (to avoid duplicates)
+          const exists = prevReviews.some(review => review.id === newReview.id);
+          if (exists) {
+            return prevReviews;
+          }
+          const updatedReviews = [newReview, ...prevReviews];
+          
+          // Update filtered views if we have a filter active
+          if (currentFilter) {
+            applyFilter(currentFilter, updatedReviews);
+          } else {
+            setFilteredReviews(updatedReviews);
+          }
+          
+          return updatedReviews;
+        });
+      });
+      
+      // Clean up on component unmount or when network/server status changes
+      return () => {
+        removeNewReviewListener();
+        reviewApiService.disconnectSocket();
+      };
+    }
+  }, [isNetworkDown, isServerDown, currentFilter]);
     
   const addReview = async (newReview) => {
     try {
