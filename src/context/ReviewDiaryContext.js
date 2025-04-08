@@ -183,14 +183,64 @@ export function ReviewDiaryProvider({ children }) {
           if (exists) {
             return prevReviews;
           }
-          const updatedReviews = [newReview, ...prevReviews];
+          
+          // Ensure the review has all necessary properties
+          const processedReview = {
+            ...newReview,
+            createdAt: newReview.createdAt || new Date().toISOString(),
+            offline: false,
+            id: String(newReview.id) // Ensure consistent ID format
+          };
+          
+          const updatedReviews = [processedReview, ...prevReviews];
+          
+          // Update localStorage
+          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
           
           // Update filtered views if we have a filter active
-          if (currentFilter) {
-            applyFilter(currentFilter, updatedReviews);
-          } else {
-            setFilteredReviews(updatedReviews);
+          if (currentFilter === null || currentFilter === processedReview.rating) {
+            setFilteredReviews(prev => [processedReview, ...prev]);
           }
+          
+          return updatedReviews;
+        });
+      });
+
+      // Listen for review updates
+      const removeUpdateListener = reviewApiService.onReviewUpdated((updatedReview) => {
+        console.log("Received review update via WebSocket:", updatedReview);
+        setReviews(prevReviews => {
+          const updatedReviews = prevReviews.map(review => 
+            review.id === updatedReview.id ? { ...updatedReview, offline: false } : review
+          );
+          
+          // Update localStorage
+          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
+          
+          // Update filtered reviews if necessary
+          if (currentFilter === null || currentFilter === updatedReview.rating) {
+            setFilteredReviews(prev => prev.map(review => 
+              review.id === updatedReview.id ? { ...updatedReview, offline: false } : review
+            ));
+          } else {
+            setFilteredReviews(prev => prev.filter(review => review.id !== updatedReview.id));
+          }
+          
+          return updatedReviews;
+        });
+      });
+
+      // Listen for review deletions
+      const removeDeleteListener = reviewApiService.onReviewDeleted((deletedId) => {
+        console.log("Received review deletion via WebSocket:", deletedId);
+        setReviews(prevReviews => {
+          const updatedReviews = prevReviews.filter(review => review.id !== deletedId);
+          
+          // Update localStorage
+          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
+          
+          // Update filtered reviews
+          setFilteredReviews(prev => prev.filter(review => review.id !== deletedId));
           
           return updatedReviews;
         });
@@ -199,6 +249,8 @@ export function ReviewDiaryProvider({ children }) {
       // Clean up on component unmount or when network/server status changes
       return () => {
         removeNewReviewListener();
+        removeUpdateListener();
+        removeDeleteListener();
         reviewApiService.disconnectSocket();
       };
     }

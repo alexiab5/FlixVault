@@ -47,6 +47,8 @@ export default function MovieDiary() {
   const [isGeneratingReviews, setIsGeneratingReviews] = useState(false)
   const [reviewCount, setReviewCount] = useState(0)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [csvFile, setCsvFile] = useState(null)
+  const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 })
 
   const [editingReview, setEditingReview] = useState(null)
   const [selectedMovie, setSelectedMovie] = useState(null)
@@ -87,7 +89,7 @@ export default function MovieDiary() {
     console.log(`Generated ${reviewCount} random reviews successfully`);
   }, [isGeneratingReviews, addReview, reviews, reviewCount]);
 
-  // Generate reviews when the page is first loaded
+ // Generate reviews when the page is first loaded
   // useEffect(() => {
   //   // Only generate reviews if there are fewer than 20 reviews
   //   if (reviews.length < 20) {
@@ -325,30 +327,213 @@ export default function MovieDiary() {
     return ""
   }
 
+  // Export reviews to CSV
+  const exportToCsv = useCallback(() => {
+    if (!reviews.length) {
+      alert('No reviews to export');
+      return;
+    }
+
+    // Create CSV header
+    const headers = ['id', 'year', 'month', 'day', 'movie', 'poster', 'released', 'rating', 'review'];
+    const csvContent = [headers.join(',')];
+
+    // Add each review as a row
+    reviews.forEach(review => {
+      const row = [
+        review.id,
+        review.year,
+        review.month,
+        review.day,
+        `"${review.movie.replace(/"/g, '""')}"`, // Escape quotes in movie title
+        review.poster,
+        review.released,
+        review.rating,
+        `"${review.review.replace(/"/g, '""')}"` // Escape quotes in review text
+      ];
+      csvContent.push(row.join(','));
+    });
+
+    // Create and download the file
+    const csvString = csvContent.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `movie-reviews-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [reviews]);
+
+  // Handle CSV file upload
+  const handleFileUpload = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Reset file input
+    event.target.value = null;
+
+    // Check if it's a CSV file
+    if (!file.name.endsWith('.csv')) {
+      alert('Please upload a CSV file');
+      return;
+    }
+
+    // Initialize import progress
+    setImportProgress({ active: true, current: 0, total: 0, success: 0, failed: 0 });
+
+    // Use a more efficient approach for large files
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const csvText = e.target.result;
+        const rows = csvText.split('\n');
+        
+        // Check if the CSV has the expected format
+        if (rows.length < 2) {
+          alert('The CSV file is empty or has an invalid format');
+          setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+          return;
+        }
+
+        // Parse headers
+        const headers = rows[0].split(',');
+        const expectedHeaders = ['id', 'year', 'month', 'day', 'movie', 'poster', 'released', 'rating', 'review'];
+        
+        // Check if all expected headers are present
+        const hasAllHeaders = expectedHeaders.every(header => 
+          headers.includes(header)
+        );
+        
+        if (!hasAllHeaders) {
+          alert('The CSV file does not have the expected format');
+          setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+          return;
+        }
+
+        // Process rows in chunks to avoid blocking the UI
+        const totalRows = rows.length - 1; // Exclude header row
+        setImportProgress(prev => ({ ...prev, total: totalRows }));
+        
+        // Process in chunks of 10 rows at a time
+        const CHUNK_SIZE = 10;
+        let currentRow = 1; // Start after header
+        
+        const processChunk = async () => {
+          const chunkEnd = Math.min(currentRow + CHUNK_SIZE, rows.length);
+          
+          for (let i = currentRow; i < chunkEnd; i++) {
+            const row = rows[i].split(',');
+            if (row.length < expectedHeaders.length) {
+              setImportProgress(prev => ({ ...prev, current: i, failed: prev.failed + 1 }));
+              continue;
+            }
+            
+            try {
+              // Create a review object from the CSV row
+              const review = {
+                // Generate a new unique ID instead of using the one from the CSV
+                id: Date.now() + Math.floor(Math.random() * 1000000) + i,
+                year: row[headers.indexOf('year')],
+                month: row[headers.indexOf('month')],
+                day: row[headers.indexOf('day')],
+                movie: row[headers.indexOf('movie')].replace(/^"|"$/g, '').replace(/""/g, '"'),
+                poster: row[headers.indexOf('poster')],
+                released: parseInt(row[headers.indexOf('released')], 10),
+                rating: parseInt(row[headers.indexOf('rating')], 10),
+                review: row[headers.indexOf('review')].replace(/^"|"$/g, '').replace(/""/g, '"')
+              };
+              
+              await addReview(review);
+              setImportProgress(prev => ({ ...prev, current: i, success: prev.success + 1 }));
+            } catch (error) {
+              console.error('Error adding review:', error);
+              setImportProgress(prev => ({ ...prev, current: i, failed: prev.failed + 1 }));
+            }
+          }
+          
+          currentRow = chunkEnd;
+          
+          // If there are more rows to process, schedule the next chunk
+          if (currentRow < rows.length) {
+            // Use setTimeout to allow the UI to update
+            setTimeout(processChunk, 0);
+          } else {
+            // Import complete
+            setImportProgress(prev => ({ ...prev, active: false }));
+            alert(`Import complete. Successfully imported ${importProgress.success} reviews. Failed: ${importProgress.failed}`);
+          }
+        };
+        
+        // Start processing the first chunk
+        processChunk();
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        alert('Error parsing the CSV file. Please check the format.');
+        setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+      }
+    };
+    
+    reader.readAsText(file);
+  }, [addReview, importProgress.success, importProgress.failed]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-white mb-1">Your Diary</h2>
         
-        {/* Add a button to manually generate more reviews */}
-        <div className="mb-4">
+        {/* Add buttons for generating reviews and CSV operations */}
+        <div className="mb-4 flex justify-center space-x-2">
           <Button 
             onClick={() => generateMultipleReviews(20)} 
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-2"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
             disabled={isGeneratingReviews}
           >
             {isGeneratingReviews ? `Generating Reviews (${reviewCount})...` : 'Generate More Reviews'}
           </Button>
           
           <Button 
-            onClick={() => setShowDebugPanel(!showDebugPanel)} 
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+            onClick={exportToCsv} 
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+            disabled={reviews.length === 0}
           >
-            {showDebugPanel ? 'Hide Debug Panel' : 'Show Debug Panel'}
+            Export to CSV
           </Button>
+          
+          <label className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer">
+            Import from CSV
+            <input 
+              type="file" 
+              accept=".csv" 
+              className="hidden" 
+              onChange={handleFileUpload}
+              disabled={importProgress.active}
+            />
+          </label>
         </div>
         
-        {/* Debug Panel */}
+        {/* Import Progress Indicator */}
+        {importProgress.active && (
+          <div className="mb-4 p-4 bg-gray-800 rounded-lg text-white">
+            <h3 className="font-bold mb-2">Importing Reviews...</h3>
+            <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden mb-2">
+              <div 
+                className="bg-purple-500 h-full transition-all duration-300" 
+                style={{ width: `${Math.min(100, (importProgress.current / importProgress.total) * 100)}%` }}
+              ></div>
+            </div>
+            <div className="text-sm">
+              Progress: {importProgress.current} of {importProgress.total} reviews
+              <br />
+              Success: {importProgress.success} | Failed: {importProgress.failed}
+            </div>
+          </div>
+        )}
+        
+        {/* Debug Panel - hidden by default */}
         {showDebugPanel && (
           <div className="mb-4 p-4 bg-gray-800 rounded-lg text-left text-white text-sm">
             <h3 className="font-bold mb-2">Sliding Window Debug Info</h3>

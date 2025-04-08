@@ -194,6 +194,20 @@ class ReviewApiService {
     return () => socket.off('newReview', callback);
   }
   
+  onReviewUpdated(callback) {
+    const socket = this.connectSocket();
+    socket.on('reviewUpdated', callback);
+    this.socketListeners.push({ event: 'reviewUpdated', callback });
+    return () => socket.off('reviewUpdated', callback);
+  }
+  
+  onReviewDeleted(callback) {
+    const socket = this.connectSocket();
+    socket.on('reviewDeleted', callback);
+    this.socketListeners.push({ event: 'reviewDeleted', callback });
+    return () => socket.off('reviewDeleted', callback);
+  }
+  
   onReviewStats(callback) {
     const socket = this.connectSocket();
     socket.on('reviewStats', callback);
