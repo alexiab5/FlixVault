@@ -78,6 +78,26 @@ export const reviewApiService = {
     return data.review;
   },
 
+  getReviewById: async (reviewId) => {
+    try {
+      const response = await fetch(`/api/movieReviews/${reviewId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch review: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching review by ID:', error);
+      throw error;
+    }
+  },
+
   async addReview(review) {
     if (!await isOnline()) {
       queueOperation({

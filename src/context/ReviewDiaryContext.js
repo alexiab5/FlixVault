@@ -26,15 +26,18 @@ export function ReviewDiaryProvider({ children }) {
     const initializeApp = async () => {
       try {
         setIsLoading(true);
+        console.log("Initializing app and loading reviews...");
         
         // Check network first
         const networkOnline = navigator.onLine;
         setIsNetworkDown(!networkOnline);
+        console.log("Network status:", networkOnline ? "online" : "offline");
         
         if (!networkOnline) {
           // Load from cache if network is down
           const cached = localStorage.getItem('cachedReviews');
           const cachedReviews = cached ? JSON.parse(cached) : [];
+          console.log("Loaded from cache (network down):", cachedReviews.length, "reviews");
           setReviews(cachedReviews);
           setFilteredReviews(cachedReviews);
           setIsServerDown(false); // Not relevant when network is down
@@ -44,6 +47,7 @@ export function ReviewDiaryProvider({ children }) {
         // Check if server is reachable
         const isServerUp = await reviewApiService.isServerReachable();
         setIsServerDown(!isServerUp);
+        console.log("Server status:", isServerUp ? "up" : "down");
         
         let fetchedReviews = [];
         
@@ -51,6 +55,7 @@ export function ReviewDiaryProvider({ children }) {
           // We're fully online, sync and fetch fresh data
           await reviewApiService.syncPendingReviews();
           fetchedReviews = await reviewApiService.getAllReviews();
+          console.log("Fetched from server:", fetchedReviews.length, "reviews");
           
           // Cache for offline use
           localStorage.setItem('cachedReviews', JSON.stringify(fetchedReviews));
@@ -58,6 +63,7 @@ export function ReviewDiaryProvider({ children }) {
           // Server is down, load from cache
           const cached = localStorage.getItem('cachedReviews');
           fetchedReviews = cached ? JSON.parse(cached) : [];
+          console.log("Loaded from cache (server down):", fetchedReviews.length, "reviews");
         }
         
         setReviews(fetchedReviews);
@@ -71,6 +77,7 @@ export function ReviewDiaryProvider({ children }) {
         const cached = localStorage.getItem('cachedReviews');
         if (cached) {
           const cachedReviews = JSON.parse(cached);
+          console.log("Loaded from cache (after error):", cachedReviews.length, "reviews");
           setReviews(cachedReviews);
           setFilteredReviews(cachedReviews);
         }
@@ -81,7 +88,7 @@ export function ReviewDiaryProvider({ children }) {
     
     initializeApp();
   }, []);
-  
+
   // Set up periodic connectivity checks and event listeners
   useEffect(() => {
     const checkServerStatus = async () => {
@@ -160,7 +167,7 @@ export function ReviewDiaryProvider({ children }) {
       window.removeEventListener('online', handleOnline);
     };
   }, []);
-
+    
   const addReview = async (newReview) => {
     try {
       setIsLoading(true);
@@ -457,6 +464,56 @@ export function ReviewDiaryProvider({ children }) {
     }
   };
 
+  const getReviewById = async (reviewId) => {
+    console.log(`Trying to find review with ID: ${reviewId}`);
+    
+    if (!reviewId) {
+      console.error("Invalid review ID provided");
+      return null;
+    }
+    
+    // First check if it's in the current state
+    const reviewFromState = reviews.find(r => r.id == reviewId);
+    if (reviewFromState) {
+      console.log("Found review in current state:", reviewFromState.movie);
+      return reviewFromState;
+    }
+    console.log("Review not found in current state, checking localStorage...");
+    
+    // If not in state, try to get from localStorage
+    const cachedReviewsStr = localStorage.getItem('cachedReviews');
+    if (cachedReviewsStr) {
+      try {
+        const cachedReviews = JSON.parse(cachedReviewsStr);
+        const cachedReview = cachedReviews.find(r => r.id == reviewId);
+        if (cachedReview) {
+          console.log("Found review in localStorage:", cachedReview.movie);
+          return cachedReview;
+        }
+      } catch (err) {
+        console.error("Error parsing cached reviews:", err);
+      }
+    }
+    console.log("Review not found in localStorage either");
+    
+    // If we're online, try to fetch from the server
+    if (!isNetworkDown && !isServerDown) {
+      console.log("Attempting to fetch review from server...");
+      try {
+        const fetchedReview = await reviewApiService.getReviewById(reviewId);
+        if (fetchedReview) {
+          console.log("Fetched review from server:", fetchedReview.movie);
+          return fetchedReview;
+        }
+      } catch (err) {
+        console.error("Error fetching review from server:", err);
+      }
+    }
+    
+    console.log("Review not found anywhere");
+    return null;
+  };
+
   return (
     <ReviewDiaryContext.Provider
       value={{
@@ -469,6 +526,7 @@ export function ReviewDiaryProvider({ children }) {
         updateReview,
         filterReviewsByRating,
         resetReviews,
+        getReviewById,
         isLoading,
         error,
         isNetworkDown,

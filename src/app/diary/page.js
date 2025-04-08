@@ -6,6 +6,7 @@ import clsx from "clsx"
 import Icons from "@/components/Icons"
 import { useRouter } from "next/navigation"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
+import EditReviewModal from "@/components/EditReviewModal"
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -37,6 +38,7 @@ export default function MovieDiary() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [selectedRatings, setSelectedRatings] = useState([]) // Array of selected ratings
   const [currentPage, setCurrentPage] = useState(1)
+  const [editingReview, setEditingReview] = useState(null)
   const router = useRouter()
 
   // Find special reviews for highlighting
@@ -94,17 +96,40 @@ export default function MovieDiary() {
     }
   }
 
-  const navigateToEditReview = (e, reviewId) => {
-    if (reviewId) {
-      e.preventDefault(); // This is crucial! ensures the application uses client-side navigation rather than making HTTP requests!!!!!
-      router.push(`/edit-review/${reviewId}`)
+  // const navigateToEditReview = (e, reviewId) => {
+  //   e.preventDefault();
+  //   if (reviewId) {
+  //     console.log("Navigating to edit page for review:", reviewId);
+  //     router.push(`/edit-review/${reviewId}`);
+  //   }
+  // }
+
+  const handleEditButtonClick = (e) => {
+    if (checkedReview !== null) {
+      openEditModal(e, checkedReview)
     }
   }
 
-  const handleEditButtonClick = () => {
-    if (checkedReview !== null) {
-      navigateToEditReview(checkedReview)
+  const openEditModal = (e, reviewId) => {
+    e.preventDefault();
+    
+    // Find the review to edit - use String() to ensure consistent comparison
+    const reviewToEdit = reviews.find(r => String(r.id) === String(reviewId));
+    if (reviewToEdit) {
+      setEditingReview(reviewToEdit);
+    } else {
+      console.error("Review not found:", reviewId);
     }
+  }
+  
+  const closeEditModal = () => {
+    setEditingReview(null)
+  }
+  
+  const handleSaveReview = (updatedReview) => {
+    // The updateReview function is called inside the modal component
+    // Here we just need to close the modal
+    closeEditModal()
   }
 
   const handleFilterClick = () => {
@@ -204,7 +229,7 @@ export default function MovieDiary() {
             <Button onClick={handleSearchPageNavigation} className="text-white">
               <Icons.SquaresPlus />
             </Button>
-            <Button className="text-white" onClick={handleEditButtonClick} aria-label="Edit">
+            <Button className="text-white" onClick={(e) => handleEditButtonClick(e)} aria-label="Edit">
               <Icons.Pencil />
             </Button>
             <Button className="text-white" onClick={handleDelete} aria-label="Delete">
@@ -349,8 +374,13 @@ export default function MovieDiary() {
                     ))}
                   </div>
                   <div className="text-center">
-                    <Button className="text-white" onClick={(e) => navigateToEditReview(e, review.id)}>
-                      <Icons.ArrowUpRight />
+                    <Button 
+                      className="text-white" 
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
+                        openEditModal(e, review.id);
+                      }}
+                    ><Icons.ArrowUpRight />
                     </Button>
                   </div>
                 </div>
@@ -421,6 +451,9 @@ export default function MovieDiary() {
             </div>
           )}
         </Card>
+
+        {/* Modal for editing reviews - moved OUTSIDE the Card */}
+        {editingReview && <EditReviewModal review={editingReview} onClose={closeEditModal} onSave={handleSaveReview} />}
       </div>
     </div>
   )
