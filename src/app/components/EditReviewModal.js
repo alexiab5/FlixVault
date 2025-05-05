@@ -5,14 +5,14 @@ import Image from "next/image"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 
 export default function EditReviewModal({ review, onClose, onSave }) {
-  const [reviewText, setReviewText] = useState(review?.review || "")
+  const [reviewText, setReviewText] = useState(review?.content || "")
   const [rating, setRating] = useState(review?.rating || 0)
   const { updateReview } = useReviewDiary()
 
   useEffect(() => {
     // Update state when review prop changes
     if (review) {
-      setReviewText(review.review || "")
+      setReviewText(review.content || "")
       setRating(review.rating || 0)
     }
   }, [review])
@@ -22,7 +22,7 @@ export default function EditReviewModal({ review, onClose, onSave }) {
       if (review) {
         const updatedReview = {
           ...review,
-          review: reviewText,
+          content: reviewText,
           rating,
         }
 
@@ -53,7 +53,7 @@ export default function EditReviewModal({ review, onClose, onSave }) {
   if (!review) return null
 
   return (
-    <div className="fixed inset-0 backdrop-blur-lg z-50 flex items-center justify-center p-0">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[9999] flex items-center justify-center">
       <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto relative shadow-2xl border border-pink-300">
         {/* Modal header with title */}
         <div className="text-center mb-8">

@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Movie {
+  id            String    @id
+  tmdbId        Int       @unique // TMDB movie ID
+  title         String
+  director      String?
+  releaseDate   DateTime?
+  posterPath    String?   // TMDB poster path
+  language      String?
+  voteAverage   Float?    // TMDB vote average
+  reviews       Review[]  // One-to-many relationship with reviews
+  genres        MovieGenre[] // Many-to-many relationship with genres
+  userWatchlist UserWatchlist[] // Many-to-many relationship with users' watchlists
+  createdAt     DateTime  @default(now()) // When the movie was first added to our database
+  updatedAt     DateTime  @updatedAt // When the movie record was last updated
+
+  @@index([tmdbId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      @db.SmallInt
+  content   String   @db.Text
+  createdAt DateTime @default(now()) // When the review was created
+  updatedAt DateTime @updatedAt // When the review was last updated
+  movie     Movie    @relation(fields: [movieId], references: [id])
+  movieId   String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  likes     Int      @default(0)
+  isPublic  Boolean  @default(true)
+
+  @@index([movieId])
+  @@index([userId])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String   // Hashed password
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  reviews       Review[]
+  watchlist     UserWatchlist[]
+
+  @@index([email])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Genre {
+  id        String        @id @default(cuid())
+  tmdbId    Int          @unique // TMDB genre ID
+  name      String       @unique
+  movies    MovieGenre[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+// Junction table for movie-genre relationship
+model MovieGenre {
+  movie     Movie  @relation(fields: [movieId], references: [id])
+  movieId   String
+  genre     Genre  @relation(fields: [genreId], references: [id])
+  genreId   String
+
+  @@id([movieId, genreId])
+  @@index([movieId])
+  @@index([genreId])
+}
+
+// Junction table for user watchlist
+model UserWatchlist {
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  movie     Movie   @relation(fields: [movieId], references: [id])
+  movieId   String
+  addedAt   DateTime @default(now())
+
+  @@id([userId, movieId])
+  @@index([userId])
+  @@index([movieId])
+} 

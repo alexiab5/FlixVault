@@ -1,0 +1,41 @@
+import { NextResponse } from 'next/server';
+import { db } from '../../../../lib/db';
+import { tmdbService } from '../../../../lib/tmdb';
+
+export async function GET(request, context) {
+  try {
+    const { id } = await context.params;
+    
+    // First try to get the movie from our database
+    let movie = await db.getMovieByTmdbId(id);
+    
+    // If not found, fetch from TMDB and save to our database
+    if (!movie) {
+      const tmdbMovie = await tmdbService.getMovieDetails(parseInt(id));
+      if (!tmdbMovie) {
+        return NextResponse.json({ error: 'Movie not found' }, { status: 404 });
+      }
+
+      // Save the movie to our database
+      movie = await db.createMovie({
+        id: tmdbMovie.id.toString(),
+        tmdbId: tmdbMovie.id,
+        title: tmdbMovie.title,
+        director: tmdbMovie.director,
+        releaseDate: new Date(tmdbMovie.releaseDate),
+        posterPath: tmdbMovie.posterPath,
+        language: tmdbMovie.language,
+        voteAverage: tmdbMovie.voteAverage,
+        genres: tmdbMovie.genres.map(g => g.tmdbId.toString())
+      });
+    }
+
+    // Get reviews for this movie
+    const reviews = await db.getAllReviews({ movieId: movie.id });
+
+    return NextResponse.json({ movie, reviews });
+  } catch (error) {
+    console.error('Error fetching movie:', error);
+    return NextResponse.json({ error: 'Failed to fetch movie' }, { status: 500 });
+  }
+} 

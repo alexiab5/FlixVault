@@ -4,10 +4,33 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 
-export default function AddReviewModal({ movie, onClose }) {
+export default function AddReviewModal({ movieId, onClose }) {
+  const [movie, setMovie] = useState(null)
   const [rating, setRating] = useState(0)
   const [reviewText, setReviewText] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
   const { addReview } = useReviewDiary()
+
+  // Fetch movie details when component mounts
+  useEffect(() => {
+    const fetchMovieDetails = async () => {
+      try {
+        const response = await fetch(`/api/movies/${movieId}`)
+        const data = await response.json()
+        if (data.movie) {
+          setMovie(data.movie)
+        }
+      } catch (error) {
+        console.error('Error fetching movie details:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (movieId) {
+      fetchMovieDetails()
+    }
+  }, [movieId])
 
   // Close modal if Escape key is pressed
   useEffect(() => {
@@ -25,23 +48,48 @@ export default function AddReviewModal({ movie, onClose }) {
     setRating(newRating)
   }
 
-  const handleAddEntry = () => {
+  const handleAddEntry = async () => {
     if (!movie) return
 
-    const newEntry = {
-      id: Date.now(),
-      year: new Date().getFullYear(),
-      month: new Date().toLocaleString("default", { month: "short" }).toUpperCase(),
-      day: String(new Date().getDate()).padStart(2, "0"),
-      movie: movie.title,
-      poster: movie.posterUrl || "/placeholder.svg",
-      released: movie.year,
-      rating,
-      review: reviewText,
-    }
+    try {
+      const reviewData = {
+        rating: rating,
+        content: reviewText,
+        movieId: movie.id,
+        userId: "DEFAULT_USER_ID" // You should replace this with the actual user ID from your auth system
+      }
 
-    addReview(newEntry)
-    onClose()
+      const response = await fetch('/api/movieReviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reviewData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create review')
+      }
+
+      const data = await response.json()
+      addReview(data.review)
+      onClose()
+    } catch (error) {
+      console.error('Error creating review:', error)
+      // You might want to show an error message to the user here
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[9999] flex items-center justify-center">
+        <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto relative shadow-2xl border border-pink-300 mx-auto my-auto">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-pink-800">Loading movie details...</h2>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!movie) return null
@@ -63,22 +111,33 @@ export default function AddReviewModal({ movie, onClose }) {
         </button>
 
         {/* Movie title */}
-        <h3 className="text-2xl font-bold text-pink-800 mb-6 text-center">
-          {movie.title} ({movie.year})
+        <h3 className="text-2xl font-bold text-pink-800 mb-2 text-center">
+          {movie.title}
         </h3>
+
+        {/* Movie details */}
+        <div className="text-center mb-6 text-pink-700">
+          <p className="text-lg">
+            {new Date(movie.releaseDate).getFullYear()}
+            {movie.director && ` • Directed by ${movie.director}`}
+          </p>
+          {movie.genres && movie.genres.length > 0 && (
+            <p className="text-sm mt-1">
+              {movie.genres.map(g => g.name).join(', ')}
+            </p>
+          )}
+        </div>
 
         <div className="flex flex-col md:flex-row gap-8">
           {/* Movie poster */}
           <div className="w-full md:w-1/3 flex flex-col items-center">
             <div className="w-44 h-64 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
-              {/* Use next/image for better image handling */}
               <Image
-                src={movie.posterUrl || "/placeholder.svg?height=400&width=300"}
+                src={movie.posterPath ? `https://image.tmdb.org/t/p/w500${movie.posterPath}` : "/placeholder.svg"}
                 alt={movie.title}
                 width={176}
                 height={256}
                 className="object-cover w-full h-full"
-                unoptimized={movie.posterUrl?.startsWith("./")} // For local images
               />
             </div>
 
@@ -126,4 +185,5 @@ export default function AddReviewModal({ movie, onClose }) {
         </div>
       </div>
     </div>
-  )}
+  )
+}

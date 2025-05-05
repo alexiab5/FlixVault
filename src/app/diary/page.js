@@ -51,7 +51,7 @@ export default function MovieDiary() {
   const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 })
 
   const [editingReview, setEditingReview] = useState(null)
-  const [selectedMovie, setSelectedMovie] = useState(null)
+  const [selectedMovieId, setSelectedMovieId] = useState(null)
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -99,29 +99,14 @@ export default function MovieDiary() {
 
   // Check for a selected movie in the URL parameters when the component mounts
   useEffect(() => {
-    const movieParam = searchParams.get("selectedMovie")
-    if (movieParam) {
-      try {
-        // For a string ID
-        if (movieParam.startsWith('"') && movieParam.endsWith('"')) {
-          // It's just an ID string, we need to fetch the movie data
-          const movieId = JSON.parse(movieParam)
-          // Fetch the movie data based on ID (simplified example)
-          console.log("movie id:", movieId);
-          const movie = getMovieById(movieId);
-          if (movie) {
-            setSelectedMovie(movie)
-          }
-          console.log("selected movie:", movie.title);
-        } 
-      } catch (error) {
-        console.error("Error parsing movie data:", error)
-      }
+    const movieId = searchParams.get("selectedMovie")
+    if (movieId) {
+      setSelectedMovieId(movieId)
     }
   }, [searchParams])
 
   const closeAddModal = () => {
-    setSelectedMovie(null)
+    setSelectedMovieId(null)
     // Clear the URL parameter when closing the modal
     router.replace("/diary")
   }
@@ -757,9 +742,22 @@ export default function MovieDiary() {
           </div>
         </Card>
 
-        {/* Modal for editing reviews - moved OUTSIDE the Card */}
-        {editingReview && <EditReviewModal review={editingReview} onClose={closeEditModal} onSave={handleSaveReview} />}
-        {selectedMovie && <AddReviewModal movie={selectedMovie} onClose={closeAddModal} />}
+        {/* Add Review Modal */}
+        {selectedMovieId && (
+          <AddReviewModal
+            movieId={selectedMovieId}
+            onClose={closeAddModal}
+          />
+        )}
+
+        {/* Edit Review Modal */}
+        {editingReview && (
+          <EditReviewModal
+            review={editingReview}
+            onClose={closeEditModal}
+            onSave={handleSaveReview}
+          />
+        )}
       </div>
     </div>
   )
