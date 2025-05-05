@@ -189,26 +189,6 @@ async function main() {
     })
   ]);
 
-  // Create sample reviews
-  await Promise.all([
-    prisma.review.create({
-      data: {
-        rating: 5,
-        content: 'A masterpiece of cinema. Timeless storytelling at its best.',
-        movie: { connect: { id: movies[0].id } },
-        user: { connect: { id: users[0].id } }
-      }
-    }),
-    prisma.review.create({
-      data: {
-        rating: 5,
-        content: 'The definitive crime drama. Marlon Brando delivers an iconic performance.',
-        movie: { connect: { id: movies[1].id } },
-        user: { connect: { id: users[1].id } }
-      }
-    })
-  ]);
-
   // Add movies to user watchlists
   await Promise.all([
     prisma.userWatchlist.upsert({

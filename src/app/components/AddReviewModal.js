@@ -9,6 +9,7 @@ export default function AddReviewModal({ movieId, onClose }) {
   const [rating, setRating] = useState(0)
   const [reviewText, setReviewText] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
   const { addReview } = useReviewDiary()
 
   // Fetch movie details when component mounts
@@ -22,6 +23,7 @@ export default function AddReviewModal({ movieId, onClose }) {
         }
       } catch (error) {
         console.error('Error fetching movie details:', error)
+        setError("Failed to load movie details. Please try again.")
       } finally {
         setIsLoading(false)
       }
@@ -46,10 +48,29 @@ export default function AddReviewModal({ movieId, onClose }) {
 
   const handleRatingChange = (newRating) => {
     setRating(newRating)
+    setError("")
+  }
+
+  const validateReview = () => {
+    if (!reviewText.trim()) {
+      setError("Please write your review")
+      return false
+    }
+    if (rating === 0) {
+      setError("Please select a rating")
+      return false
+    }
+    if (reviewText.length > 1000) {
+      setError("Review must not exceed 1000 characters")
+      return false
+    }
+    return true
   }
 
   const handleAddEntry = async () => {
     if (!movie) return
+    setError("")
+    if (!validateReview()) return
 
     try {
       const reviewData = {
@@ -59,24 +80,11 @@ export default function AddReviewModal({ movieId, onClose }) {
         userId: "DEFAULT_USER_ID" // You should replace this with the actual user ID from your auth system
       }
 
-      const response = await fetch('/api/movieReviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reviewData),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create review')
-      }
-
-      const data = await response.json()
-      addReview(data.review)
+      await addReview(reviewData)
       onClose()
     } catch (error) {
+      setError("Failed to create review. Please try again.")
       console.error('Error creating review:', error)
-      // You might want to show an error message to the user here
     }
   }
 
@@ -167,10 +175,19 @@ export default function AddReviewModal({ movieId, onClose }) {
           <div className="w-full md:w-2/3">
             <textarea
               value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
+              onChange={(e) => {
+                setReviewText(e.target.value)
+                setError("")
+              }}
               className="w-full h-60 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
               placeholder="Write your review here..."
             />
+            {error && (
+              <p className="text-red-600 text-sm mt-2">{error}</p>
+            )}
+            <p className="text-pink-700 text-sm mt-2">
+              {reviewText.length}/1000 characters
+            </p>
           </div>
         </div>
 

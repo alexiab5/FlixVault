@@ -151,6 +151,23 @@ export function ReviewDiaryProvider({ children }) {
           // We're fully back online, sync any pending operations
           await reviewApiService.syncPendingReviews();
           
+          // Get the current reviews that need to be synced
+          const cachedReviews = JSON.parse(localStorage.getItem('cachedReviews') || '[]');
+          const pendingReviews = cachedReviews.filter(review => review.pendingSync);
+          
+          // Update each pending review
+          for (const review of pendingReviews) {
+            try {
+              await reviewApiService.updateReview({
+                id: review.id,
+                rating: review.rating,
+                content: review.content
+              });
+            } catch (err) {
+              console.error(`Failed to sync review ${review.id}:`, err);
+            }
+          }
+          
           // Refresh the reviews list
           const freshReviews = await reviewApiService.getAllReviews();
           setReviews(freshReviews);
@@ -260,19 +277,16 @@ export function ReviewDiaryProvider({ children }) {
     try {
       setIsLoading(true);
       
-      // Generate a temporary ID for offline mode
-      const reviewWithTempId = {
-        ...newReview,
-        id: `temp-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        offline: isNetworkDown || isServerDown
-      };
-      
       let addedReview;
       
       if (isNetworkDown || isServerDown) {
         // Store in local state and queue for sync later
-        addedReview = reviewWithTempId;
+        addedReview = {
+          ...newReview,
+          id: `temp-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          offline: true
+        };
         
         // Queue the operation for later sync
         reviewApiService.queueOperation({
@@ -286,7 +300,7 @@ export function ReviewDiaryProvider({ children }) {
         addedReview = await reviewApiService.addReview(newReview);
       }
       
-      // Update local state
+      // Only update local state after successful API call
       setReviews((prevReviews) => [addedReview, ...prevReviews]);
       
       // Update filtered reviews if necessary
@@ -361,13 +375,17 @@ export function ReviewDiaryProvider({ children }) {
           url: `/api/movieReviews/${updatedReview.id}`,
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedReview)
+          body: JSON.stringify({
+            rating: updatedReview.rating,
+            content: updatedReview.content
+          })
         });
         
-        // Use the updated review as is
+        // Use the updated review as is, but mark it as pending sync
         result = {
           ...updatedReview,
           offline: true,
+          pendingSync: true,
           updatedAt: new Date().toISOString()
         };
         
@@ -561,7 +579,7 @@ export function ReviewDiaryProvider({ children }) {
     }
     
     // First check if it's in the current state
-    const reviewFromState = reviews.find(r => r.id == reviewId);
+    const reviewFromState = reviews.find(r => String(r.id) === String(reviewId));
     if (reviewFromState) {
       console.log("Found review in current state:", reviewFromState.movie);
       return reviewFromState;
@@ -573,7 +591,7 @@ export function ReviewDiaryProvider({ children }) {
     if (cachedReviewsStr) {
       try {
         const cachedReviews = JSON.parse(cachedReviewsStr);
-        const cachedReview = cachedReviews.find(r => r.id == reviewId);
+        const cachedReview = cachedReviews.find(r => String(r.id) === String(reviewId));
         if (cachedReview) {
           console.log("Found review in localStorage:", cachedReview.movie);
           return cachedReview;

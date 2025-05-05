@@ -204,10 +204,11 @@ export const db = {
     
     const reviews = await prisma.review.findMany(query);
 
-    // Format reviews for the UI
+    // Format reviews for the UI while preserving original data
     return reviews.map(review => ({
       ...review,
-      movie: review.movie.title,
+      // Add UI-specific fields
+      movieTitle: review.movie.title,
       released: new Date(review.movie.releaseDate).getFullYear(),
       poster: review.movie.posterPath ? `https://image.tmdb.org/t/p/w500${review.movie.posterPath}` : "/placeholder.svg",
       year: new Date(review.createdAt).getFullYear(),

@@ -60,3 +60,66 @@ const movieReviews = [
 ];
 
 export default movieReviews;
+
+export function exportReviews(reviews) {
+  const exportData = reviews.map(review => ({
+    id: review.id,
+    movie: review.movie,
+    released: review.released,
+    poster: review.poster,
+    genres: review.genres || [],
+    rating: review.rating,
+    content: review.content,
+    createdAt: review.createdAt,
+    updatedAt: review.updatedAt
+  }))
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `movie-reviews-${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+export function importReviews(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const reviews = JSON.parse(e.target.result)
+        // Validate the imported data
+        if (!Array.isArray(reviews)) {
+          throw new Error('Invalid import format: expected an array of reviews')
+        }
+
+        const validatedReviews = reviews.map(review => {
+          // Ensure all required fields are present
+          if (!review.movie || !review.released || !review.rating || !review.content) {
+            throw new Error('Invalid review: missing required fields')
+          }
+
+          return {
+            movie: review.movie,
+            released: review.released,
+            poster: review.poster || null,
+            genres: Array.isArray(review.genres) ? review.genres : [],
+            rating: Number(review.rating),
+            content: review.content,
+            createdAt: review.createdAt || new Date().toISOString(),
+            updatedAt: review.updatedAt || new Date().toISOString()
+          }
+        })
+
+        resolve(validatedReviews)
+      } catch (error) {
+        reject(new Error(`Failed to import reviews: ${error.message}`))
+      }
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsText(file)
+  })
+}
