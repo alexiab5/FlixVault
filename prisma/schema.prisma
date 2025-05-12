@@ -26,6 +26,9 @@ model Movie {
   updatedAt     DateTime  @updatedAt // When the movie record was last updated
 
   @@index([tmdbId])
+  @@index([releaseDate])
+  @@index([voteAverage])
+  @@index([language])
 }
 
 model Review {
@@ -43,6 +46,9 @@ model Review {
 
   @@index([movieId])
   @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+  @@index([likes])
 }
 
 model User {
@@ -96,4 +102,5 @@ model UserWatchlist {
   @@id([userId, movieId])
   @@index([userId])
   @@index([movieId])
+  @@index([addedAt])
 } 

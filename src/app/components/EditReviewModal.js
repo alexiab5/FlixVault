@@ -50,16 +50,55 @@ export default function EditReviewModal({ review, onClose, onSave }) {
     if (!validateReview()) return
 
     try {
-      const updatedReview = {
-        id: review.id,
-        rating,
-        content: reviewText
+      const response = await fetch(`/api/movieReviews/${review.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rating,
+          content: reviewText.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update review")
       }
-      await updateReview(updatedReview)
-      onSave(updatedReview)
+
+      const data = await response.json()
+      
+      if (data.review) {
+        // Get the poster path from the original review
+        const originalPosterPath = review.movie?.posterPath || review.poster;
+        // Format the poster path with TMDB base URL if it's not already formatted
+        const formattedPosterPath = originalPosterPath?.startsWith('http') 
+          ? originalPosterPath 
+          : originalPosterPath 
+            ? `https://image.tmdb.org/t/p/w500${originalPosterPath}`
+            : "/placeholder.svg";
+
+        // Preserve the original movie data structure
+        const formattedReview = {
+          ...data.review,
+          movie: {
+            ...review.movie,
+            title: review.movie?.title || review.movie,
+            posterPath: formattedPosterPath,
+            releaseDate: review.movie?.releaseDate || new Date(review.released).toISOString(),
+            genres: review.movie?.genres || review.genres || []
+          }
+        }
+        
+        // Call onSave with the formatted review data
+        if (onSave) {
+          await onSave(formattedReview)
+        }
+      } else {
+        throw new Error("Invalid review data received from server")
+      }
     } catch (error) {
-      setError("Failed to update review. Please try again.")
-      console.error('Error updating review:', error)
+      console.error("Error updating review:", error)
+      setError(error.message || "Failed to update review")
     }
   }
 

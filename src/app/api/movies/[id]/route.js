@@ -6,7 +6,7 @@ export async function GET(request, context) {
   try {
     const { id } = await context.params;
     
-    // First try to get the movie from our database
+    // First try to get the movie from our database with all related data in a single query
     let movie = await db.getMovieByTmdbId(id);
     
     // If not found, fetch from TMDB and save to our database
@@ -30,8 +30,19 @@ export async function GET(request, context) {
       });
     }
 
-    // Get reviews for this movie
-    const reviews = await db.getAllReviews({ movieId: movie.id });
+    // Get reviews for this movie with user details in a single query
+    const reviews = await db.getAllReviews({ 
+      movieId: movie.id,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({ movie, reviews });
   } catch (error) {

@@ -59,10 +59,47 @@ export const db = {
   async getMovieByTmdbId(tmdbId) {
     return prisma.movie.findUnique({
       where: { tmdbId: parseInt(tmdbId) },
-      include: {
+      select: {
+        id: true,
+        tmdbId: true,
+        title: true,
+        director: true,
+        releaseDate: true,
+        posterPath: true,
+        language: true,
+        voteAverage: true,
         genres: {
           include: {
             genre: true
+          }
+        },
+        reviews: {
+          where: {
+            userId: "DEFAULT_USER_ID" // Replace with actual user ID from your auth system
+          },
+          select: {
+            id: true,
+            rating: true,
+            content: true,
+            createdAt: true,
+            likes: true,
+            isPublic: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 10 // Only fetch the 10 most recent reviews
+        },
+        _count: {
+          select: {
+            reviews: true
           }
         }
       }
@@ -87,11 +124,13 @@ export const db = {
         const genreDetails = genres.find(g => g.id.toString() === genreId);
         
         if (genreDetails) {
-          genre = await prisma.genre.create({
-            data: {
+          genre = await prisma.genre.upsert({
+            where: { name: genreDetails.name },
+            update: {},
+            create: {
               tmdbId: genreDetails.id,
-              name: genreDetails.name
-            }
+              name: genreDetails.name,
+            },
           });
         }
       }
@@ -161,25 +200,21 @@ export const db = {
   },
 
   // Review operations
-  async getAllReviews(options = {}) {
-    const { rating, sort = 'desc', limit, movieId, userId } = options;
+  async getAllReviews({ rating, sort = 'desc', limit = 20, skip = 0, include = {} }) {
+    const where = rating ? { rating: parseInt(rating) } : {};
     
-    const where = {
-      ...(rating && { rating: parseInt(rating) }),
-      ...(movieId && { movieId }),
-      ...(userId && { userId })
-    };
-    
-    const query = {
+    return prisma.review.findMany({
       where,
-      orderBy: [
-        { createdAt: sort },
-        { id: sort } // Secondary sort by ID to ensure stable ordering
-      ],
-      distinct: ['id'],
+      orderBy: { createdAt: sort },
+      take: limit,
+      skip,
       include: {
         movie: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            posterPath: true,
+            releaseDate: true,
             genres: {
               include: {
                 genre: true
@@ -193,29 +228,10 @@ export const db = {
             name: true,
             role: true
           }
-        }
+        },
+        ...include
       }
-    };
-
-    // Only add take if limit is defined
-    if (limit !== undefined) {
-      query.take = limit;
-    }
-    
-    const reviews = await prisma.review.findMany(query);
-
-    // Format reviews for the UI while preserving original data
-    return reviews.map(review => ({
-      ...review,
-      // Add UI-specific fields
-      movieTitle: review.movie.title,
-      released: new Date(review.movie.releaseDate).getFullYear(),
-      poster: review.movie.posterPath ? `https://image.tmdb.org/t/p/w500${review.movie.posterPath}` : "/placeholder.svg",
-      year: new Date(review.createdAt).getFullYear(),
-      month: new Date(review.createdAt).toLocaleString("default", { month: "short" }).toUpperCase(),
-      day: String(new Date(review.createdAt).getDate()).padStart(2, "0"),
-      genres: review.movie.genres.map(mg => mg.genre.name)
-    }));
+    });
   },
 
   async getReviewById(id) {
@@ -229,8 +245,12 @@ export const db = {
   },
 
   async createReview(data) {
+    const defaultUserId = await this.getDefaultUserId();
     return prisma.review.create({
-      data,
+      data: {
+        ...data,
+        userId: defaultUserId
+      },
       include: {
         movie: true,
         user: {
@@ -468,5 +488,15 @@ export const db = {
 
   async getGenreCount() {
     return await prisma.genre.count();
+  },
+
+  async getDefaultUserId() {
+    const defaultUser = await prisma.user.findUnique({
+      where: { email: 'default@example.com' }
+    });
+    if (!defaultUser) {
+      throw new Error('Default user not found. Please run the database seed.');
+    }
+    return defaultUser.id;
   }
 }; 

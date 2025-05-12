@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 
-export default function AddReviewModal({ movieId, onClose }) {
+export default function AddReviewModal({ movieId, onClose, onReviewAdded }) {
   const [movie, setMovie] = useState(null)
   const [rating, setRating] = useState(0)
   const [reviewText, setReviewText] = useState("")
@@ -16,16 +16,57 @@ export default function AddReviewModal({ movieId, onClose }) {
   useEffect(() => {
     const fetchMovieDetails = async () => {
       try {
-        const response = await fetch(`/api/movies/${movieId}`)
-        const data = await response.json()
-        if (data.movie) {
-          setMovie(data.movie)
+        setIsLoading(true);
+        const response = await fetch(`/api/movies/${movieId}`);
+        if (!response.ok) throw new Error('Failed to fetch movie details');
+        const data = await response.json();
+        
+        // Ensure we have valid data before proceeding
+        if (!data.movie) {
+          throw new Error('Movie data is missing');
+        }
+
+        // Only cache essential review data
+        const reviewsToCache = data.movie.reviews?.map(review => ({
+          id: review.id,
+          rating: review.rating,
+          content: review.content,
+          createdAt: review.createdAt
+        })) || [];
+        
+        setMovie({
+          ...data.movie,
+          reviews: data.movie.reviews || []
+        });
+        
+        // Cache only essential review data
+        try {
+          const cachedReviews = JSON.parse(localStorage.getItem('cachedReviews') || '{}');
+          // Keep only the last 5 movies' reviews
+          const keys = Object.keys(cachedReviews);
+          if (keys.length > 5) {
+            // Remove oldest entries
+            const oldestKeys = keys.slice(0, keys.length - 5);
+            oldestKeys.forEach(key => delete cachedReviews[key]);
+          }
+          cachedReviews[movieId] = reviewsToCache;
+          localStorage.setItem('cachedReviews', JSON.stringify(cachedReviews));
+        } catch (e) {
+          console.warn('Failed to cache reviews:', e);
+          // If caching fails, clear the cache and try again with just the current movie
+          try {
+            localStorage.setItem('cachedReviews', JSON.stringify({
+              [movieId]: reviewsToCache
+            }));
+          } catch (e2) {
+            console.warn('Failed to cache reviews even after clearing:', e2);
+          }
         }
       } catch (error) {
-        console.error('Error fetching movie details:', error)
+        console.error('Error fetching movie details:', error);
         setError("Failed to load movie details. Please try again.")
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
@@ -67,26 +108,61 @@ export default function AddReviewModal({ movieId, onClose }) {
     return true
   }
 
-  const handleAddEntry = async () => {
-    if (!movie) return
-    setError("")
-    if (!validateReview()) return
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateReview()) return;
 
     try {
-      const reviewData = {
-        rating: rating,
-        content: reviewText,
-        movieId: movie.id,
-        userId: "DEFAULT_USER_ID" // You should replace this with the actual user ID from your auth system
+      setIsLoading(true);
+      setError("");
+
+      const response = await fetch("/api/movieReviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          movieId: movie.id,
+          rating,
+          content: reviewText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add review");
       }
 
-      await addReview(reviewData)
-      onClose()
+      const data = await response.json();
+      
+      if (data.review) {
+        // Format the review data to match the expected structure
+        const formattedReview = {
+          ...data.review,
+          movie: {
+            title: movie.title,
+            posterPath: movie.posterPath ? `https://image.tmdb.org/t/p/w500${movie.posterPath}` : "/placeholder.svg",
+            releaseDate: movie.releaseDate,
+            genres: movie.genres || []
+          },
+          createdAt: new Date().toISOString()
+        };
+        
+        // Call onReviewAdded with the formatted review data
+        if (onReviewAdded) {
+          await onReviewAdded(formattedReview);
+        }
+      } else {
+        throw new Error("Invalid review data received from server");
+      }
+      
+      onClose();
     } catch (error) {
-      setError("Failed to create review. Please try again.")
-      console.error('Error creating review:', error)
+      console.error("Error adding review:", error);
+      setError(error.message || "Failed to add review");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -190,7 +266,7 @@ export default function AddReviewModal({ movieId, onClose }) {
         {/* Add entry button */}
         <div className="mt-8 flex justify-center">
           <button
-            onClick={handleAddEntry}
+            onClick={handleSubmit}
             className="bg-pink-500 hover:bg-pink-600 text-white text-lg font-medium py-2.5 px-14 rounded-full shadow-lg transition-colors duration-300 cursor-pointer"
           >
             Add to Diary

@@ -4,28 +4,98 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// For now, we'll use a default user ID until authentication is implemented
-const DEFAULT_USER_ID = '1'; // This should match one of the user IDs from your seed data
-
 // Get the default user ID
 async function getDefaultUserId() {
   const defaultUser = await prisma.user.findUnique({
     where: { email: 'default@example.com' }
   });
-  return defaultUser?.id;
+  if (!defaultUser) {
+    throw new Error('Default user not found. Please run the database seed.');
+  }
+  return defaultUser.id;
 }
 
 export async function GET(request) {
   try {
     const url = new URL(request.url);
-    const rating = url.searchParams.get('rating');
+    const ratings = url.searchParams.getAll('rating').map(r => parseInt(r));
     const sort = url.searchParams.get('sort') || 'desc';
-    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')) : undefined;
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const limit = parseInt(url.searchParams.get('limit')) || 20;
+    const skip = (page - 1) * limit;
     
-    const reviews = await db.getAllReviews({ rating, sort, limit });
-    return NextResponse.json({ reviews });
+    console.log(`API: Fetching reviews - page: ${page}, limit: ${limit}, skip: ${skip}, sort: ${sort}, ratings: ${ratings}`);
+    
+    // Get the default user ID
+    const defaultUserId = await getDefaultUserId();
+    
+    // Get total count for pagination, only for default user
+    const totalCount = await prisma.review.count({
+      where: {
+        userId: defaultUserId,
+        ...(ratings.length > 0 ? { rating: { in: ratings } } : {})
+      }
+    });
+    
+    console.log(`API: Total reviews count: ${totalCount}`);
+    
+    const reviews = await prisma.review.findMany({ 
+      where: {
+        userId: defaultUserId,
+        ...(ratings.length > 0 ? { rating: { in: ratings } } : {})
+      },
+      orderBy: {
+        createdAt: sort === 'desc' ? 'desc' : 'asc'
+      },
+      skip,
+      take: limit,
+      include: {
+        movie: {
+          select: {
+            id: true,
+            title: true,
+            posterPath: true,
+            releaseDate: true,
+            genres: {
+              include: {
+                genre: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    console.log(`API: Fetched ${reviews.length} reviews for page ${page}`);
+
+    // Format the reviews to include proper poster URLs
+    const formattedReviews = reviews.map(review => ({
+      ...review,
+      movie: {
+        ...review.movie,
+        posterPath: review.movie.posterPath 
+          ? (review.movie.posterPath.startsWith('http') 
+              ? review.movie.posterPath 
+              : `https://image.tmdb.org/t/p/w500${review.movie.posterPath}`)
+          : "/placeholder.svg"
+      }
+    }));
+
+    const response = {
+      reviews: formattedReviews,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    };
+
+    console.log('API: Pagination info:', response.pagination);
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching reviews:', error);
+    console.error('API Error fetching reviews:', error);
     return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 });
   }
 }
@@ -41,9 +111,6 @@ export async function POST(request) {
 
     // Get the default user ID
     const defaultUserId = await getDefaultUserId();
-    if (!defaultUserId) {
-      return NextResponse.json({ error: 'Default user not found. Please run the database seed.' }, { status: 500 });
-    }
 
     // Get movie details
     const movie = await prisma.movie.findUnique({

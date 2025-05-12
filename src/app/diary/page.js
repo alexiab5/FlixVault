@@ -33,7 +33,20 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
 }
 
 // Number of reviews to show per page
-const ITEMS_PER_PAGE = 4
+const ITEMS_PER_PAGE = 20
+
+// Add debounce utility
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
 export default function MovieDiary() {
   const { reviews, deleteReview, sortReviews, setReviews, addReview } = useReviewDiary()
@@ -41,7 +54,7 @@ export default function MovieDiary() {
   const [checkedReview, setCheckedReview] = useState(null)
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [selectedRatings, setSelectedRatings] = useState([])
-  const [visibleItems, setVisibleItems] = useState(ITEMS_PER_PAGE)
+  const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [isGeneratingReviews, setIsGeneratingReviews] = useState(false)
@@ -49,12 +62,16 @@ export default function MovieDiary() {
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [csvFile, setCsvFile] = useState(null)
   const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 })
+  const [displayedReviews, setDisplayedReviews] = useState([])
+  const [observerTarget, setObserverTarget] = useState(null)
 
   const [editingReview, setEditingReview] = useState(null)
   const [selectedMovieId, setSelectedMovieId] = useState(null)
   const [reviewToDelete, setReviewToDelete] = useState(null)
   const searchParams = useSearchParams()
   const router = useRouter()
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Generate multiple random reviews for testing the sliding window
   const generateMultipleReviews = useCallback(async (count = 50) => {
@@ -175,33 +192,31 @@ export default function MovieDiary() {
   //   }
   // }
 
-  const handleEditButtonClick = (e) => {
-    if (checkedReview !== null) {
-      openEditModal(e, checkedReview)
+  const handleEditClick = async (e, reviewId) => {
+    e.stopPropagation();
+    try {
+      // Fetch the full review data before opening the modal
+      const response = await fetch(`/api/movieReviews/${reviewId}`);
+      const data = await response.json();
+      
+      if (data.review) {
+        // Format the review data to match the expected structure
+        const formattedReview = {
+          ...data.review,
+          movie: {
+            title: data.review.movie?.title || data.review.movie,
+            posterPath: data.review.movie?.posterPath || data.review.poster,
+            releaseDate: data.review.movie?.releaseDate || new Date(data.review.released).toISOString()
+          }
+        };
+        setEditingReview(formattedReview);
+      } else {
+        console.error('Review not found:', reviewId);
+      }
+    } catch (error) {
+      console.error('Error fetching review for edit:', error);
     }
-  }
-
-  const openEditModal = (e, reviewId) => {
-    e.preventDefault();
-    
-    // Find the review to edit - use String() to ensure consistent comparison
-    const reviewToEdit = reviews.find(r => String(r.id) === String(reviewId));
-    if (reviewToEdit) {
-      setEditingReview(reviewToEdit);
-    } else {
-      console.error("Review not found:", reviewId);
-    }
-  }
-  
-  const closeEditModal = () => {
-    setEditingReview(null)
-  }
-  
-  const handleSaveReview = (updatedReview) => {
-    // The updateReview function is called inside the modal component
-    // Here we just need to close the modal
-    closeEditModal()
-  }
+  };
 
   const handleFilterClick = () => {
     setShowFilterDropdown(!showFilterDropdown)
@@ -209,25 +224,24 @@ export default function MovieDiary() {
 
   const handleFilterByRating = (rating) => {
     setSelectedRatings((prevSelectedRatings) => {
-      // If rating is already selected, remove it
       if (prevSelectedRatings.includes(rating)) {
-        return prevSelectedRatings.filter((r) => r !== rating)
+        return prevSelectedRatings.filter((r) => r !== rating);
+      } else {
+        return [...prevSelectedRatings, rating];
       }
-      // Otherwise add it to the selection
-      else {
-        return [...prevSelectedRatings, rating]
-      }
-    })
+    });
 
-    // Reset to first page when filter changes
-    setVisibleItems(ITEMS_PER_PAGE)
-  }
+    // Reset pagination
+    setCurrentPage(1);
+    setHasMore(true);
+  };
 
   const clearFilter = () => {
-    setSelectedRatings([])
-    setShowFilterDropdown(false)
-    setVisibleItems(ITEMS_PER_PAGE) // Reset to first page
-  }
+    setSelectedRatings([]);
+    setShowFilterDropdown(false);
+    setCurrentPage(1);
+    setHasMore(true);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -245,53 +259,178 @@ export default function MovieDiary() {
 
   // Filter reviews based on selected ratings
   const filteredReviews = useMemo(() => {
-    return selectedRatings.length === 0 ? reviews : reviews.filter((review) => selectedRatings.includes(review.rating))
-  }, [reviews, selectedRatings])
+    if (selectedRatings.length === 0) return reviews;
+    return reviews.filter((review) => selectedRatings.includes(review.rating));
+  }, [reviews, selectedRatings]);
 
-  // Get visible reviews for the current scroll position
-  const visibleReviews = useMemo(() => {
-    return filteredReviews.slice(0, visibleItems)
-  }, [filteredReviews, visibleItems])
-
-  // Check if there are more reviews to load
+  // Load reviews when page, sort order, or rating filter changes
   useEffect(() => {
-    setHasMore(visibleItems < filteredReviews.length)
-  }, [visibleItems, filteredReviews.length])
+    console.log('Effect triggered - currentPage:', currentPage, 'isLoading:', isLoading);
+    if (!isLoading || isRefreshing) {
+      loadReviews(currentPage);
+    }
+  }, [currentPage, sortOrder, selectedRatings]);
 
-  // Handle scroll event to load more reviews
-  const handleScroll = useCallback(() => {
-    if (isLoading || !hasMore) return
+  // Handle review added
+  const handleReviewAdded = async (newReview) => {
+    console.log('Adding new review to the list');
+    
+    // If we're sorting by date (desc) and not filtering by rating,
+    // we can just add the new review to the top of the list
+    if (sortOrder === 'desc' && selectedRatings.length === 0) {
+      setDisplayedReviews(prev => [newReview, ...prev]);
+      return;
+    }
+    
+    // Otherwise, we need to refresh to maintain proper sorting/filtering
+    console.log('Refreshing list to maintain sort/filter order');
+    setIsRefreshing(true);
+    
+    // Store current filter state
+    const currentFilters = {
+      sortOrder,
+      selectedRatings: [...selectedRatings]
+    };
+    
+    // Reset pagination state
+    setCurrentPage(1);
+    setDisplayedReviews([]);
+    setHasMore(true);
+    
+    // Force a reload of page 1 with current filters
+    await loadReviews(1);
+    
+    // Restore filter state
+    setSortOrder(currentFilters.sortOrder);
+    setSelectedRatings(currentFilters.selectedRatings);
+    
+    setIsRefreshing(false);
+  };
 
-    // Get the container element
-    const container = document.querySelector('.reviews-container');
-    if (!container) return;
+  // Handle review deleted
+  const handleDeleteClick = (e, review) => {
+    e.stopPropagation();
+    setReviewToDelete(review);
+  };
 
-    // Check if we're near the bottom of the container
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+  const handleDeleteConfirm = async () => {
+    if (reviewToDelete) {
+      try {
+        const response = await fetch(`/api/movieReviews/${reviewToDelete.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete review');
+        }
+        
+        // Remove the deleted review from displayed reviews
+        setDisplayedReviews(prev => prev.filter(review => review.id !== reviewToDelete.id));
+        setReviewToDelete(null);
+        
+        // Refresh the list to ensure proper pagination
+        await refreshReviews();
+      } catch (error) {
+        console.error('Error deleting review:', error);
+      }
+    }
+  };
 
-    if (isNearBottom) {
-      setIsLoading(true);
+  const handleDeleteCancel = () => {
+    setReviewToDelete(null);
+  };
+
+  // Handle review updated
+  const handleReviewUpdated = async () => {
+    await refreshReviews();
+  };
+
+  // Function to refresh reviews
+  const refreshReviews = async () => {
+    setCurrentPage(1);
+    setDisplayedReviews([]);
+    setHasMore(true);
+    await loadReviews(1);
+  };
+
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isRefreshing) {
+          setCurrentPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget) {
+      observer.observe(observerTarget);
+    }
+
+    return () => {
+      if (observerTarget) {
+        observer.unobserve(observerTarget);
+      }
+    };
+  }, [hasMore, isLoading, observerTarget, isRefreshing]);
+
+  // Load reviews function
+  const loadReviews = async (page) => {
+    if (isLoading && !isRefreshing) {
+      console.log('Skipping loadReviews - already loading');
+      return;
+    }
+    
+    console.log('Loading reviews for page:', page, 'current state:', { currentPage, isLoading, isRefreshing });
+    setIsLoading(true);
+    try {
+      // Build rating filter parameters
+      const ratingParams = selectedRatings.length > 0 
+        ? selectedRatings.map(rating => `rating=${rating}`).join('&')
+        : '';
       
-      // Load more items immediately without delay
-      setVisibleItems(prev => prev + ITEMS_PER_PAGE);
+      // Always use page 1 if we're refreshing
+      const pageToFetch = isRefreshing ? 1 : page;
+      const url = `/api/movieReviews?page=${pageToFetch}&limit=${ITEMS_PER_PAGE}&sort=${sortOrder}${ratingParams ? `&${ratingParams}` : ''}`;
+      console.log('Fetching reviews with URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) throw new Error('Failed to fetch reviews');
+      
+      const data = await response.json();
+      console.log('Received data:', {
+        page: data.pagination?.page,
+        totalPages: data.pagination?.totalPages,
+        reviewCount: data.reviews?.length,
+        requestedPage: pageToFetch
+      });
+      
+      if (data.reviews) {
+        if (pageToFetch === 1 || isRefreshing) {
+          // If it's the first page or we're refreshing, replace all reviews
+          console.log('Setting first page reviews:', data.reviews.length);
+          setDisplayedReviews(data.reviews);
+        } else {
+          // For subsequent pages, append new reviews
+          setDisplayedReviews(prev => {
+            const newReviews = data.reviews.filter(
+              newReview => !prev.some(existingReview => existingReview.id === newReview.id)
+            );
+            console.log('Appending new reviews:', newReviews.length);
+            return [...prev, ...newReviews];
+          });
+        }
+        
+        setHasMore(data.pagination.page < data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    } finally {
       setIsLoading(false);
     }
-  }, [isLoading, hasMore]);
-
-  // Add scroll event listener to the container
-  useEffect(() => {
-    const container = document.querySelector('.reviews-container');
-    if (!container) return;
-    
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  // Reset visible items when filters change
-  useEffect(() => {
-    setVisibleItems(ITEMS_PER_PAGE);
-  }, [selectedRatings]);
+  };
 
   // Get highlight class for a review
   const getHighlightClass = (review) => {
@@ -530,22 +669,6 @@ export default function MovieDiary() {
     reader.readAsText(file);
   }, [addReview, importProgress.success, importProgress.failed]);
 
-  const handleDeleteClick = (e, review) => {
-    e.stopPropagation();
-    setReviewToDelete(review);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (reviewToDelete) {
-      deleteReview(reviewToDelete.id);
-      setReviewToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setReviewToDelete(null);
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
@@ -608,7 +731,7 @@ export default function MovieDiary() {
               <div>{filteredReviews.length}</div>
               
               <div>Visible Items:</div>
-              <div>{visibleItems}</div>
+              <div>{ITEMS_PER_PAGE}</div>
               
               <div>Has More:</div>
               <div>{hasMore ? 'Yes' : 'No'}</div>
@@ -625,11 +748,11 @@ export default function MovieDiary() {
               <div className="w-full bg-gray-700 h-6 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-500 h-full" 
-                  style={{ width: `${Math.min(100, (visibleItems / filteredReviews.length) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (ITEMS_PER_PAGE / filteredReviews.length) * 100)}%` }}
                 ></div>
               </div>
               <div className="text-xs mt-1 text-gray-400">
-                Showing {visibleItems} of {filteredReviews.length} items
+                Showing {ITEMS_PER_PAGE} of {filteredReviews.length} items
               </div>
             </div>
           </div>
@@ -741,30 +864,30 @@ export default function MovieDiary() {
           </div>
 
           <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-8 reviews-container">
-            {visibleReviews.length > 0 ? (
-              visibleReviews.map((review) => (
+            {displayedReviews.length > 0 ? (
+              displayedReviews.map((review) => (
                 <div
-                  key={review.id}
+                  key={`${review.id}-${review.createdAt}`}
                   className={clsx(
                     "grid grid-cols-7 items-center text-white border-b border-white/10 pb-8 rounded-lg transition-colors",
                     getHighlightClass(review),
                   )}
                 >
                   <div className="text-center">
-                    <span>{review.year}</span>
+                    <span>{new Date(review.createdAt).getFullYear()}</span>
                   </div>
-                  <div className="text-center">{review.month}</div>
-                  <div className="text-center">{review.day}</div>
+                  <div className="text-center">{new Date(review.createdAt).toLocaleString("default", { month: "short" }).toUpperCase()}</div>
+                  <div className="text-center">{String(new Date(review.createdAt).getDate()).padStart(2, "0")}</div>
                   <div className="flex justify-center">
                     <Image
-                      src={review.poster || "/placeholder.svg"}
-                      alt={review.movie}
+                      src={review.movie?.posterPath || "/placeholder.svg"}
+                      alt={`Poster for ${review.movie?.title || 'Movie'}`}
                       width={70}
                       height={100}
                       className="rounded-md"
                     />
                   </div>
-                  <div className="text-center">{review.released}</div>
+                  <div className="text-center">{new Date(review.movie?.releaseDate).getFullYear()}</div>
                   <div className="text-center flex justify-center">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span key={i} className={i < review.rating ? "text-white" : "text-white/30"}>
@@ -775,10 +898,7 @@ export default function MovieDiary() {
                   <div className="text-center flex justify-center gap-2">
                     <Button 
                       className="text-white" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(e, review.id);
-                      }}
+                      onClick={(e) => handleEditClick(e, review.id)}
                     >
                       <Icons.ArrowUpRight />
                     </Button>
@@ -805,16 +925,24 @@ export default function MovieDiary() {
             )}
             
             {/* End of list indicator */}
-            {!hasMore && visibleReviews.length > 0 && (
+            {!hasMore && displayedReviews.length > 0 && (
               <div className="text-center text-white/50 py-4">
                 No more reviews to load
               </div>
             )}
             
-            {/* Sliding window indicator */}
-            <div className="text-center text-white/70 py-2 text-sm">
-              Showing {visibleReviews.length} of {filteredReviews.length} reviews
+            {/* Debug info */}
+            <div className="text-center text-white/50 py-2 text-sm">
+              Showing {displayedReviews.length} reviews (Page {currentPage})
             </div>
+            
+            {/* Observer target for infinite scrolling */}
+            {hasMore && (
+              <div
+                ref={setObserverTarget}
+                className="h-4 w-full"
+              />
+            )}
           </div>
         </Card>
 
@@ -823,6 +951,7 @@ export default function MovieDiary() {
           <AddReviewModal
             movieId={selectedMovieId}
             onClose={closeAddModal}
+            onReviewAdded={handleReviewAdded}
           />
         )}
 
@@ -830,8 +959,34 @@ export default function MovieDiary() {
         {editingReview && (
           <EditReviewModal
             review={editingReview}
-            onClose={closeEditModal}
-            onSave={handleSaveReview}
+            onClose={() => setEditingReview(null)}
+            onSave={async (updatedReview) => {
+              // If we have rating filters active and the rating changed,
+              // we need to check if the review should still be displayed
+              if (selectedRatings.length > 0 && updatedReview.rating !== editingReview.rating) {
+                // If the new rating doesn't match any selected ratings, remove the review
+                if (!selectedRatings.includes(updatedReview.rating)) {
+                  setDisplayedReviews(prev => 
+                    prev.filter(review => review.id !== updatedReview.id)
+                  );
+                } else {
+                  // If it still matches, update it
+                  setDisplayedReviews(prev => 
+                    prev.map(review => 
+                      review.id === updatedReview.id ? updatedReview : review
+                    )
+                  );
+                }
+              } else {
+                // No filters active, just update the review
+                setDisplayedReviews(prev => 
+                  prev.map(review => 
+                    review.id === updatedReview.id ? updatedReview : review
+                  )
+                );
+              }
+              setEditingReview(null);
+            }}
           />
         )}
 

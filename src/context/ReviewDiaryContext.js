@@ -636,7 +636,8 @@ export function ReviewDiaryProvider({ children }) {
         isLoading,
         error,
         isNetworkDown,
-        isServerDown
+        isServerDown,
+        setReviews
       }}
     >
       {children}
