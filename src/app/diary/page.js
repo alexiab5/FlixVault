@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 import EditReviewModal from "@/components/EditReviewModal"
 import AddReviewModal from "@/components/AddReviewModal"
-import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts";
-import { generateReview } from "../../lib/clientReviewGenerator.js";
+import DeleteConfirmationModal from "@/components/DeleteConfirmationModal"
+import { generateReview } from "../../lib/clientReviewGenerator.js"
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -52,6 +52,7 @@ export default function MovieDiary() {
 
   const [editingReview, setEditingReview] = useState(null)
   const [selectedMovieId, setSelectedMovieId] = useState(null)
+  const [reviewToDelete, setReviewToDelete] = useState(null)
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -529,6 +530,22 @@ export default function MovieDiary() {
     reader.readAsText(file);
   }, [addReview, importProgress.success, importProgress.failed]);
 
+  const handleDeleteClick = (e, review) => {
+    e.stopPropagation();
+    setReviewToDelete(review);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (reviewToDelete) {
+      deleteReview(reviewToDelete.id);
+      setReviewToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setReviewToDelete(null);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
@@ -622,12 +639,6 @@ export default function MovieDiary() {
           <div className="flex justify-end space-x-2 relative">
             <Button onClick={handleSearchPageNavigation} className="text-white">
               <Icons.SquaresPlus />
-            </Button>
-            <Button className="text-white" onClick={(e) => handleEditButtonClick(e)} aria-label="Edit">
-              <Icons.Pencil />
-            </Button>
-            <Button className="text-white" onClick={handleDelete} aria-label="Delete">
-              <Icons.Trash />
             </Button>
             <Button className="text-white filter-dropdown" onClick={handleFilterClick} aria-label="Filter">
               <Icons.Filter />
@@ -739,13 +750,7 @@ export default function MovieDiary() {
                     getHighlightClass(review),
                   )}
                 >
-                  <div className="flex justify-center items-center">
-                    <div
-                      onClick={() => handleRadioClick(review.id)}
-                      className="w-5 h-5 rounded-full border-2 border-white/50 flex items-center justify-center mr-2 cursor-pointer"
-                    >
-                      <Icons.RadioButton checked={checkedReview === review.id} />
-                    </div>
+                  <div className="text-center">
                     <span>{review.year}</span>
                   </div>
                   <div className="text-center">{review.month}</div>
@@ -767,14 +772,21 @@ export default function MovieDiary() {
                       </span>
                     ))}
                   </div>
-                  <div className="text-center">
+                  <div className="text-center flex justify-center gap-2">
                     <Button 
                       className="text-white" 
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent event bubbling
+                        e.stopPropagation();
                         openEditModal(e, review.id);
                       }}
-                    ><Icons.ArrowUpRight />
+                    >
+                      <Icons.ArrowUpRight />
+                    </Button>
+                    <Button 
+                      className="text-red-500 hover:text-red-600" 
+                      onClick={(e) => handleDeleteClick(e, review)}
+                    >
+                      <Icons.Trash />
                     </Button>
                   </div>
                 </div>
@@ -820,6 +832,15 @@ export default function MovieDiary() {
             review={editingReview}
             onClose={closeEditModal}
             onSave={handleSaveReview}
+          />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {reviewToDelete && (
+          <DeleteConfirmationModal
+            review={reviewToDelete}
+            onConfirm={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
           />
         )}
       </div>

@@ -73,16 +73,18 @@ export function SearchBar() {
 
       {isOpen && !isLoading && results.length > 0 && (
         <div className="absolute w-full mt-2 bg-black/30 backdrop-blur-md rounded-md overflow-hidden z-10">
-          {results.map((movie) => (
-            <div
-              key={movie.id}
-              onClick={() => handleSelectMovie(movie.id)}
-              className="p-3 hover:bg-white/10 cursor-pointer text-white"
-            >
-              {movie.title} ({new Date(movie.releaseDate).getFullYear()})
-              {movie.director && ` - ${movie.director}`}
-            </div>
-          ))}
+          <div className="max-h-[300px] overflow-y-auto">
+            {results.map((movie) => (
+              <div
+                key={movie.id}
+                onClick={() => handleSelectMovie(movie.id)}
+                className="p-3 hover:bg-white/10 cursor-pointer text-white border-b border-white/10 last:border-b-0"
+              >
+                {movie.title} ({new Date(movie.releaseDate).getFullYear()})
+                {movie.director && ` - ${movie.director}`}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

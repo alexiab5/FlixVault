@@ -73,12 +73,9 @@ export default function EditReviewModal({ review, onClose, onSave }) {
   const posterPath = review.movie?.posterPath ? `https://image.tmdb.org/t/p/w500${review.movie.posterPath}` : review.poster
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[9999] flex items-center justify-center">
-      <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto relative shadow-2xl border border-pink-300">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-lg z-[9999] flex items-center justify-center p-4">
+      <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-5xl relative shadow-2xl border border-pink-300">
         {/* Modal header with title */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-pink-800">Edit Review</h2>
-        </div>
 
         {/* Close button */}
         <button
@@ -106,20 +103,20 @@ export default function EditReviewModal({ review, onClose, onSave }) {
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Movie poster */}
+          {/* Movie poster and rating */}
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-44 h-64 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
+            <div className="w-48 h-72 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
               <Image
                 src={posterPath || "/placeholder.svg"}
                 alt={movieTitle}
-                width={176}
-                height={256}
+                width={192}
+                height={288}
                 className="object-cover w-full h-full"
               />
             </div>
 
             {/* Rating */}
-            <div className="mt-4 flex flex-col items-center">
+            <div className="mt-6 flex flex-col items-center">
               <span className="text-pink-800 text-lg font-medium mb-2">Rating</span>
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -148,7 +145,7 @@ export default function EditReviewModal({ review, onClose, onSave }) {
                 setReviewText(e.target.value)
                 setError("")
               }}
-              className="w-full h-60 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
+              className="w-full h-72 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
               placeholder="Write your review here..."
             />
             {error && (

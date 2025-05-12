@@ -90,8 +90,8 @@ export default function AddReviewModal({ movieId, onClose }) {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[9999] flex items-center justify-center">
-        <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto relative shadow-2xl border border-pink-300 mx-auto my-auto">
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-lg z-[9999] flex items-center justify-center p-4">
+        <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-5xl relative shadow-2xl border border-pink-300">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-pink-800">Loading movie details...</h2>
           </div>
@@ -103,12 +103,9 @@ export default function AddReviewModal({ movieId, onClose }) {
   if (!movie) return null
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[9999] flex items-center justify-center">
-      <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-3xl max-h-[85vh] overflow-auto relative shadow-2xl border border-pink-300 mx-auto my-auto">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-lg z-[9999] flex items-center justify-center p-4">
+      <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-5xl relative shadow-2xl border border-pink-300">
         {/* Modal header with title */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-pink-800">Add Review</h2>
-        </div>
 
         {/* Close button */}
         <button
@@ -118,39 +115,38 @@ export default function AddReviewModal({ movieId, onClose }) {
           ✕
         </button>
 
-        {/* Movie title */}
-        <h3 className="text-2xl font-bold text-pink-800 mb-2 text-center">
-          {movie.title}
-        </h3>
-
-        {/* Movie details */}
-        <div className="text-center mb-6 text-pink-700">
-          <p className="text-lg">
-            {new Date(movie.releaseDate).getFullYear()}
-            {movie.director && ` • Directed by ${movie.director}`}
-          </p>
+        {/* Movie title and details */}
+        <div className="text-center mb-6">
+          <h3 className="text-2xl font-bold text-pink-800 mb-2">
+            {movie.title} ({new Date(movie.releaseDate).getFullYear()})
+          </h3>
+          {movie.director && (
+            <p className="text-sm text-pink-700 mb-1">
+              Directed by {movie.director}
+            </p>
+          )}
           {movie.genres && movie.genres.length > 0 && (
-            <p className="text-sm mt-1">
-              {movie.genres.map(g => g.name).join(', ')}
+            <p className="text-sm text-pink-700">
+              {movie.genres.map(g => g.genre?.name || g.name).join(', ')}
             </p>
           )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Movie poster */}
+          {/* Movie poster and rating */}
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-44 h-64 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
+            <div className="w-48 h-72 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
               <Image
                 src={movie.posterPath ? `https://image.tmdb.org/t/p/w500${movie.posterPath}` : "/placeholder.svg"}
                 alt={movie.title}
-                width={176}
-                height={256}
+                width={192}
+                height={288}
                 className="object-cover w-full h-full"
               />
             </div>
 
             {/* Rating */}
-            <div className="mt-4 flex flex-col items-center">
+            <div className="mt-6 flex flex-col items-center">
               <span className="text-pink-800 text-lg font-medium mb-2">Rating</span>
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -179,7 +175,7 @@ export default function AddReviewModal({ movieId, onClose }) {
                 setReviewText(e.target.value)
                 setError("")
               }}
-              className="w-full h-60 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
+              className="w-full h-72 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
               placeholder="Write your review here..."
             />
             {error && (
