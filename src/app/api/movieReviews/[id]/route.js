@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../lib/db';
 import { PrismaClient } from '@prisma/client';
+import { getUserFromToken } from '../../../../lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -40,6 +41,17 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Get user ID from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getUserFromToken(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
     // Get the existing review to ensure it exists and get movie details
     const existingReview = await prisma.review.findUnique({
       where: { id },
@@ -60,17 +72,16 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
 
-    // Get the default user ID
-    const defaultUserId = await getDefaultUserId();
-    if (!defaultUserId) {
-      return NextResponse.json({ error: 'Default user not found. Please run the database seed.' }, { status: 500 });
+    // Check if the user owns the review
+    if (existingReview.userId !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized to update this review' }, { status: 403 });
     }
 
     // Update the review
     const updated = await db.updateReview(id, {
       rating: updatedData.rating,
       content: updatedData.content
-    }, defaultUserId, 'USER');
+    }, user.id, user.role);
 
     // Format the review with movie details for the UI
     const formattedReview = {
@@ -95,10 +106,15 @@ export async function DELETE(request, { params }) {
   try {
     const id = params.id;
     
-    // Get the default user ID
-    const defaultUserId = await getDefaultUserId();
-    if (!defaultUserId) {
-      return NextResponse.json({ error: 'Default user not found. Please run the database seed.' }, { status: 500 });
+    // Get user ID from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getUserFromToken(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     // Get the review to check ownership and get movie details
@@ -113,8 +129,7 @@ export async function DELETE(request, { params }) {
               }
             }
           }
-        },
-        user: true
+        }
       }
     });
 
@@ -122,25 +137,15 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
 
-    // Delete the review
-    await db.deleteReview(id, defaultUserId, 'USER');
-    
-    // Format the deleted review for the UI using the review data we fetched
-    const formattedReview = {
-      id: review.id,
-      rating: review.rating,
-      content: review.content,
-      createdAt: review.createdAt,
-      movie: review.movie.title,
-      released: new Date(review.movie.releaseDate).getFullYear(),
-      poster: review.movie.posterPath ? `https://image.tmdb.org/t/p/w500${review.movie.posterPath}` : "/placeholder.svg",
-      year: new Date(review.createdAt).getFullYear(),
-      month: new Date(review.createdAt).toLocaleString("default", { month: "short" }).toUpperCase(),
-      day: String(new Date(review.createdAt).getDate()).padStart(2, "0"),
-      genres: review.movie.genres.map(mg => mg.genre.name)
-    };
+    // Check if the user owns the review
+    if (review.userId !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized to delete this review' }, { status: 403 });
+    }
 
-    return NextResponse.json({ review: formattedReview });
+    // Delete the review
+    await db.deleteReview(id, user.id, user.role);
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting review:', error);
     return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { PrismaClient } from '@prisma/client';
+import { getUserFromToken } from '../../../lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -18,7 +19,8 @@ async function getDefaultUserId() {
 export async function GET(request) {
   try {
     const url = new URL(request.url);
-    const ratings = url.searchParams.getAll('rating').map(r => parseInt(r));
+    const ratingParam = url.searchParams.get('rating');
+    const ratings = ratingParam ? ratingParam.split(',').map(r => parseInt(r)).filter(r => !isNaN(r)) : [];
     const sort = url.searchParams.get('sort') || 'desc';
     const page = parseInt(url.searchParams.get('page')) || 1;
     const limit = parseInt(url.searchParams.get('limit')) || 20;
@@ -26,13 +28,21 @@ export async function GET(request) {
     
     console.log(`API: Fetching reviews - page: ${page}, limit: ${limit}, skip: ${skip}, sort: ${sort}, ratings: ${ratings}`);
     
-    // Get the default user ID
-    const defaultUserId = await getDefaultUserId();
+    // Get user ID from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getUserFromToken(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
     
-    // Get total count for pagination, only for default user
+    // Get total count for pagination
     const totalCount = await prisma.review.count({
       where: {
-        userId: defaultUserId,
+        userId: user.id,
         ...(ratings.length > 0 ? { rating: { in: ratings } } : {})
       }
     });
@@ -41,7 +51,7 @@ export async function GET(request) {
     
     const reviews = await prisma.review.findMany({ 
       where: {
-        userId: defaultUserId,
+        userId: user.id,
         ...(ratings.length > 0 ? { rating: { in: ratings } } : {})
       },
       orderBy: {
@@ -109,8 +119,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get the default user ID
-    const defaultUserId = await getDefaultUserId();
+    // Get user ID from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getUserFromToken(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
     // Get movie details
     const movie = await prisma.movie.findUnique({
@@ -127,24 +145,45 @@ export async function POST(request) {
       rating: reviewData.rating,
       content: reviewData.content,
       movieId: reviewData.movieId,
-      userId: defaultUserId
+      userId: user.id
     });
 
-    // Format the review with movie details for the UI
+    // Fetch the complete review with movie details
+    const completeReview = await prisma.review.findUnique({
+      where: { id: newReview.id },
+      include: {
+        movie: {
+          select: {
+            id: true,
+            title: true,
+            posterPath: true,
+            releaseDate: true,
+            genres: {
+              include: {
+                genre: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Format the review to include proper poster URL
     const formattedReview = {
-      ...newReview,
-      movie: movie.title,
-      released: new Date(movie.releaseDate).getFullYear(),
-      poster: movie.posterPath ? `https://image.tmdb.org/t/p/w500${movie.posterPath}` : "/placeholder.svg",
-      year: new Date().getFullYear(),
-      month: new Date().toLocaleString("default", { month: "short" }).toUpperCase(),
-      day: String(new Date().getDate()).padStart(2, "0"),
-      genres: movie.genres.map(mg => mg.genre.name)
+      ...completeReview,
+      movie: {
+        ...completeReview.movie,
+        posterPath: completeReview.movie.posterPath 
+          ? (completeReview.movie.posterPath.startsWith('http') 
+              ? completeReview.movie.posterPath 
+              : `https://image.tmdb.org/t/p/w500${completeReview.movie.posterPath}`)
+          : "/placeholder.svg"
+      }
     };
 
     return NextResponse.json({ review: formattedReview }, { status: 201 });
   } catch (error) {
-    console.error('Error creating review:', error);
+    console.error('API Error creating review:', error);
     return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 });
   }
 }

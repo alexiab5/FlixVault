@@ -86,7 +86,7 @@ class ReviewApiService {
       }
     });
     const data = await response.json();
-    return data.reviews;
+    return data?.reviews || [];
   }
 
   async getReview(id) {
@@ -146,7 +146,21 @@ class ReviewApiService {
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to add review');
-    return data.review;
+    
+    // Ensure we have all the necessary data
+    const addedReview = {
+      ...data.review,
+      movie: {
+        ...data.review.movie,
+        posterPath: data.review.movie.posterPath 
+          ? (data.review.movie.posterPath.startsWith('http') 
+              ? data.review.movie.posterPath 
+              : `https://image.tmdb.org/t/p/w500${data.review.movie.posterPath}`)
+          : "/placeholder.svg"
+      }
+    };
+    
+    return addedReview;
   }
 
   async updateReview(review) {

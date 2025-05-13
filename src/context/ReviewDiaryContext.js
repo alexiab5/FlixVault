@@ -54,7 +54,8 @@ export function ReviewDiaryProvider({ children }) {
         if (isServerUp) {
           // We're fully online, sync and fetch fresh data
           await reviewApiService.syncPendingReviews();
-          fetchedReviews = await reviewApiService.getAllReviews();
+          const response = await reviewApiService.getAllReviews();
+          fetchedReviews = response?.reviews || [];
           console.log("Fetched from server:", fetchedReviews.length, "reviews");
           
           // Cache for offline use

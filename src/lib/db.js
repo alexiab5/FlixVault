@@ -54,7 +54,7 @@ export const db = {
     });
   },
 
-  async getMovieByTmdbId(tmdbId) {
+  async getMovieByTmdbId(tmdbId, userId) {
     return prisma.movie.findUnique({
       where: { tmdbId: parseInt(tmdbId) },
       select: {
@@ -73,7 +73,7 @@ export const db = {
         },
         reviews: {
           where: {
-            userId: "DEFAULT_USER_ID" // Replace with actual user ID from your auth system
+            userId: userId // Use the provided user ID
           },
           select: {
             id: true,
@@ -243,11 +243,10 @@ export const db = {
   },
 
   async createReview(data) {
-    const defaultUserId = await this.getDefaultUserId();
     return prisma.review.create({
       data: {
         ...data,
-        userId: defaultUserId
+        userId: data.userId // Use the provided user ID
       },
       include: {
         movie: true,
