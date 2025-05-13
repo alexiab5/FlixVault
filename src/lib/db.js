@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from './prisma';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 export const db = {
   // Movie operations

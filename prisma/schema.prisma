@@ -49,6 +49,10 @@ model Review {
   @@index([rating])
   @@index([createdAt])
   @@index([likes])
+  @@index([createdAt(sort: Desc), id])
+  @@index([rating, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([movieId, rating])
 }
 
 model User {
