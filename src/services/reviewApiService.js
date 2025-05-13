@@ -15,7 +15,10 @@ async function syncPending() {
     try {
       await fetch(op.url, {
         method: op.method,
-        headers: op.headers,
+        headers: {
+          ...op.headers,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: op.body
       });
     } catch (e) {
@@ -36,7 +39,12 @@ class ReviewApiService {
   async isServerReachable() {
     if (!navigator.onLine) return false;
     try {
-      const response = await fetch("/api/ping", { method: "GET" });
+      const response = await fetch("/api/ping", { 
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       return response.ok;
     } catch (err) {
       return false;
@@ -72,14 +80,22 @@ class ReviewApiService {
     const queryString = params.toString();
     if (queryString) url += `?${queryString}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     const data = await response.json();
     return data.reviews;
   }
 
   async getReview(id) {
     if (!await isOnline()) throw new Error('Offline: cannot fetch review');
-    const response = await fetch(`${API_URL}/${id}`);
+    const response = await fetch(`${API_URL}/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     const data = await response.json();
     return data.review;
   }
@@ -90,6 +106,7 @@ class ReviewApiService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
       });
       
@@ -109,7 +126,10 @@ class ReviewApiService {
       queueOperation({
         url: API_URL,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(review)
       });
       return { ...review, id: Date.now(), offline: true }; // Fake ID
@@ -117,7 +137,10 @@ class ReviewApiService {
 
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
       body: JSON.stringify(review),
     });
 
@@ -131,7 +154,10 @@ class ReviewApiService {
       queueOperation({
         url: `${API_URL}/${review.id}`,
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(review)
       });
       return review;
@@ -139,7 +165,10 @@ class ReviewApiService {
 
     const response = await fetch(`${API_URL}/${review.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
       body: JSON.stringify(review),
     });
 
@@ -153,12 +182,19 @@ class ReviewApiService {
       queueOperation({
         url: `${API_URL}/${id}`,
         method: 'DELETE',
-        headers: {}
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       return { id, deleted: true };
     }
 
-    const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_URL}/${id}`, { 
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to delete review');
     return data.review;
@@ -167,7 +203,12 @@ class ReviewApiService {
   async resetReviews() {
     if (!await isOnline()) throw new Error('Offline: cannot reset reviews');
 
-    const response = await fetch(`${API_URL}/reset`, { method: 'POST' });
+    const response = await fetch(`${API_URL}/reset`, { 
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to reset reviews');
     return data.message;
@@ -181,7 +222,11 @@ class ReviewApiService {
   connectSocket() {
     if (this.socket) return this.socket;
     
-    this.socket = io('http://localhost:3000'); // !!!???
+    this.socket = io('http://localhost:3000', {
+      auth: {
+        token: localStorage.getItem('token')
+      }
+    });
     
     console.log('WebSocket connection established');
     return this.socket;

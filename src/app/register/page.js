@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import RegularButton from '../components/RegularButton';
 
-export default function Login() {
+export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,14 +20,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await register(name, email, password);
       if (result.success) {
         router.push('/diary');
       } else {
         setError(result.error);
       }
     } catch (err) {
-      setError('An error occurred during login');
+      setError('An error occurred during registration');
     } finally {
       setLoading(false);
     }
@@ -35,7 +36,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed">
       <div className="bg-white/10 backdrop-blur-md p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">Login</h1>
+        <h1 className="text-2xl font-bold text-white mb-6 text-center">Register</h1>
         
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-white px-4 py-3 rounded mb-4">
@@ -44,6 +45,19 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-white mb-2">Name</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full bg-white/20 text-white border-white/20 px-3 py-2 rounded"
+              placeholder="Enter your name"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-white mb-2">Email</label>
             <input
@@ -75,20 +89,20 @@ export default function Login() {
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Registering...' : 'Register'}
           </RegularButton>
         </form>
 
         <p className="mt-4 text-center text-white">
-          Don't have an account?{' '}
+          Already have an account?{' '}
           <button
-            onClick={() => router.push('/register')}
+            onClick={() => router.push('/login')}
             className="text-blue-400 hover:text-blue-300"
           >
-            Register
+            Login
           </button>
         </p>
       </div>
     </div>
   );
-}
+} 

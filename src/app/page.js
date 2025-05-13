@@ -1,23 +1,28 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 import Image from "next/image";
 import RegularButton from '@/components/RegularButton';
 
 export default function Home() {
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        router.push('/diary');
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [user, loading, router]);
 
   const handleClick = () => {
     router.push('/home'); 
   };
 
-  return (
-    <div className="h-screen flex flex-col items-center justify-center text-center px-4">
-      <h1 className="text-4xl font-bold text-white mb-4">Welcome to FlixVault!</h1>
-      <p className="text-lg text-white mb-6">Lights, camera, action – your movie diary awaits!</p>
-
-      <RegularButton text="Create an account" onClick={handleClick}>
-      </RegularButton>
-    </div>
-  );
+  return null;
 }

@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from "react";
+import { useAuth } from '../../context/AuthContext';
 
 export default function Header() {
     const [isScrolled, setIsScrolled] = useState(false);
+    const { user, logout, isAuthenticated } = useAuth();
 
     useEffect(() => {
       const handleScroll = () => {
@@ -30,16 +32,30 @@ export default function Header() {
           }`}
         >
           <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <p className="text-xl font-bold">FlixVault</p>
+            <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity">
+              FlixVault
+            </Link>
             <nav className="space-x-4">
-              <Link href="/login" className="hover:underline">Log In</Link>
-              <Link href="/" className="hover:underline">Home</Link>
-              <Link href="/diary" className="hover:underline">Diary</Link>
-              <Link href="/statistics" className="hover:underline">Statistics</Link>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/diary" className="hover:underline">Diary</Link>
+                  <Link href="/statistics" className="hover:underline">Statistics</Link>
+                  <button 
+                    onClick={logout}
+                    className="hover:underline"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="hover:underline">Log In</Link>
+                  <Link href="/register" className="hover:underline">Register</Link>
+                </>
+              )}
             </nav>
           </div>
         </header>
-  
       </>
     );
   }

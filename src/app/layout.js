@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import OfflineStatusBanner from '@/components/OfflineStatusBanner';
 import "./globals.css";
 import { ReviewDiaryProvider } from "../context/ReviewDiaryContext";
+import { AuthProvider } from '../context/AuthContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,11 +34,13 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="h-full min-h-screen bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed overflow-x-hidden pt-16">
-        <ReviewDiaryProvider> {/* Wrap in Provider */}
-          <OfflineStatusBanner />
-          <Header />
-          {children}
-        </ReviewDiaryProvider>
+        <AuthProvider>
+          <ReviewDiaryProvider>
+            <OfflineStatusBanner />
+            <Header />
+            {children}
+          </ReviewDiaryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

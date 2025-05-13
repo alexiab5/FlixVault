@@ -11,6 +11,8 @@ import EditReviewModal from "@/components/EditReviewModal"
 import AddReviewModal from "@/components/AddReviewModal"
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal"
 import { generateReview } from "../../lib/clientReviewGenerator.js"
+import { useAuth } from '../../context/AuthContext'
+import RegularButton from '../components/RegularButton'
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -64,6 +66,7 @@ export default function MovieDiary() {
   const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 })
   const [displayedReviews, setDisplayedReviews] = useState([])
   const [observerTarget, setObserverTarget] = useState(null)
+  const [error, setError] = useState('')
 
   const [editingReview, setEditingReview] = useState(null)
   const [selectedMovieId, setSelectedMovieId] = useState(null)
@@ -72,6 +75,8 @@ export default function MovieDiary() {
   const router = useRouter()
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { user, logout } = useAuth();
 
   // Generate multiple random reviews for testing the sliding window
   const generateMultipleReviews = useCallback(async (count = 50) => {
@@ -384,6 +389,7 @@ export default function MovieDiary() {
     
     console.log('Loading reviews for page:', page, 'current state:', { currentPage, isLoading, isRefreshing });
     setIsLoading(true);
+    setError(''); // Clear any previous errors
     try {
       // Build rating filter parameters
       const ratingParams = selectedRatings.length > 0 
@@ -397,7 +403,10 @@ export default function MovieDiary() {
       
       const response = await fetch(url);
       
-      if (!response.ok) throw new Error('Failed to fetch reviews');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch reviews');
+      }
       
       const data = await response.json();
       console.log('Received data:', {
@@ -427,6 +436,7 @@ export default function MovieDiary() {
       }
     } catch (error) {
       console.error('Error loading reviews:', error);
+      setError(error.message || 'An error occurred while loading reviews');
     } finally {
       setIsLoading(false);
     }

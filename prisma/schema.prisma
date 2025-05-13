@@ -63,10 +63,15 @@ model User {
   role          Role     @default(USER)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  isActive      Boolean  @default(true)
   reviews       Review[]
   watchlist     UserWatchlist[]
+  auditLogs     AuditLog[]
 
   @@index([email])
+  @@index([role])
+  @@index([isActive])
 }
 
 enum Role {
@@ -107,4 +112,25 @@ model UserWatchlist {
   @@index([userId])
   @@index([movieId])
   @@index([addedAt])
+}
+
+// Audit logging system
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // CREATE, READ, UPDATE, DELETE
+  entityType  String   // The type of entity being modified (e.g., "Movie", "Review")
+  entityId    String   // The ID of the entity being modified
+  details     String?  @db.Text // Additional details about the action
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+  @@index([userId, createdAt(sort: Desc)])
 } 
