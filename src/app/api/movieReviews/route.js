@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { PrismaClient } from '@prisma/client';
 import { getUserFromToken } from '../../../lib/auth';
+import { withAuditLog } from '../../../middleware/auditLogMiddleware';
 
 const prisma = new PrismaClient();
 
@@ -110,80 +111,83 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
-  try {
-    const reviewData = await request.json();
-    
-    // Validate review data
-    if (!reviewData.movieId || !reviewData.rating || !reviewData.content) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+export const POST = withAuditLog(
+  async (request) => {
+    try {
+      const reviewData = await request.json();
+      
+      // Validate review data
+      if (!reviewData.movieId || !reviewData.rating || !reviewData.content) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      }
 
-    // Get user ID from token
-    const token = request.cookies.get('token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+      // Get user ID from token
+      const token = request.cookies.get('token')?.value;
+      if (!token) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const user = await getUserFromToken(token);
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+      const user = await getUserFromToken(token);
+      if (!user) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      }
 
-    // Get movie details
-    const movie = await prisma.movie.findUnique({
-      where: { id: reviewData.movieId },
-      include: { genres: { include: { genre: true } } }
-    });
+      // Get movie details
+      const movie = await prisma.movie.findUnique({
+        where: { id: reviewData.movieId },
+        include: { genres: { include: { genre: true } } }
+      });
 
-    if (!movie) {
-      return NextResponse.json({ error: 'Movie not found' }, { status: 404 });
-    }
+      if (!movie) {
+        return NextResponse.json({ error: 'Movie not found' }, { status: 404 });
+      }
 
-    // Create the review in the database
-    const newReview = await db.createReview({
-      rating: reviewData.rating,
-      content: reviewData.content,
-      movieId: reviewData.movieId,
-      userId: user.id
-    });
+      // Create the review in the database
+      const newReview = await db.createReview({
+        rating: reviewData.rating,
+        content: reviewData.content,
+        movieId: reviewData.movieId,
+        userId: user.id
+      });
 
-    // Fetch the complete review with movie details
-    const completeReview = await prisma.review.findUnique({
-      where: { id: newReview.id },
-      include: {
-        movie: {
-          select: {
-            id: true,
-            title: true,
-            posterPath: true,
-            releaseDate: true,
-            genres: {
-              include: {
-                genre: true
+      // Fetch the complete review with movie details
+      const completeReview = await prisma.review.findUnique({
+        where: { id: newReview.id },
+        include: {
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              posterPath: true,
+              releaseDate: true,
+              genres: {
+                include: {
+                  genre: true
+                }
               }
             }
           }
         }
-      }
-    });
+      });
 
-    // Format the review to include proper poster URL
-    const formattedReview = {
-      ...completeReview,
-      movie: {
-        ...completeReview.movie,
-        posterPath: completeReview.movie.posterPath 
-          ? (completeReview.movie.posterPath.startsWith('http') 
-              ? completeReview.movie.posterPath 
-              : `https://image.tmdb.org/t/p/w500${completeReview.movie.posterPath}`)
-          : "/placeholder.svg"
-      }
-    };
+      // Format the review to include proper poster URL
+      const formattedReview = {
+        ...completeReview,
+        movie: {
+          ...completeReview.movie,
+          posterPath: completeReview.movie.posterPath 
+            ? (completeReview.movie.posterPath.startsWith('http') 
+                ? completeReview.movie.posterPath 
+                : `https://image.tmdb.org/t/p/w500${completeReview.movie.posterPath}`)
+            : "/placeholder.svg"
+        }
+      };
 
-    return NextResponse.json({ review: formattedReview }, { status: 201 });
-  } catch (error) {
-    console.error('API Error creating review:', error);
-    return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 });
-  }
-}
+      return NextResponse.json({ review: formattedReview }, { status: 201 });
+    } catch (error) {
+      console.error('API Error creating review:', error);
+      return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 });
+    }
+  },
+  'Review'
+);

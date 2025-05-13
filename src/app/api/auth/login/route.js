@@ -53,6 +53,19 @@ export async function POST(request) {
       data: { lastLoginAt: new Date() }
     });
 
+    // Log the login action
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'READ',
+        entityType: 'User',
+        entityId: user.id,
+        details: 'User login',
+        ipAddress: request.headers.get('x-forwarded-for') || request.ip,
+        userAgent: request.headers.get('user-agent'),
+      },
+    });
+
     // Generate token
     const token = generateToken(user);
 

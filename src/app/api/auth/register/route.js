@@ -3,7 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import { hashPassword, generateToken } from '../../../../lib/auth';
 import { auditLog } from '../../../../lib/audit';
 
-const prisma = new PrismaClient();
+// Use a singleton instance of PrismaClient
+const prisma = global.prisma || new PrismaClient();
+if (process.env.NODE_ENV === 'development') global.prisma = prisma;
 
 export async function POST(request) {
   try {
@@ -25,7 +27,7 @@ export async function POST(request) {
     if (existingUser) {
       return NextResponse.json(
         { error: 'User already exists' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
@@ -38,18 +40,23 @@ export async function POST(request) {
         name,
         email,
         password: hashedPassword,
-        role: 'USER' // Default role
+        role: 'USER',
+        isActive: true
       }
     });
 
-    // Create audit log
-    await auditLog.create(
-      user.id,
-      'USER',
-      user.id,
-      'User registration',
-      request
-    );
+    // Log the registration action
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'CREATE',
+        entityType: 'User',
+        entityId: user.id,
+        details: 'User registration',
+        ipAddress: request.headers.get('x-forwarded-for') || request.ip,
+        userAgent: request.headers.get('user-agent'),
+      },
+    });
 
     // Generate token
     const token = generateToken(user);
