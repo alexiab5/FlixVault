@@ -40,6 +40,11 @@ export default function Header() {
                 <>
                   <Link href="/diary" className="hover:underline">Diary</Link>
                   <Link href="/statistics" className="hover:underline">Statistics</Link>
+                  {user?.role === 'ADMIN' && (
+                    <Link href="/admin/monitored-users" className="hover:underline bg-red-500 px-2 py-1 rounded">
+                      Admin
+                    </Link>
+                  )}
                   <button 
                     onClick={logout}
                     className="hover:underline"

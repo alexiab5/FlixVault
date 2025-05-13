@@ -4,6 +4,7 @@ import OfflineStatusBanner from '@/components/OfflineStatusBanner';
 import "./globals.css";
 import { ReviewDiaryProvider } from "../context/ReviewDiaryContext";
 import { AuthProvider } from '../context/AuthContext';
+import { startMonitoringService } from '../lib/monitoringService';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,6 +15,9 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Start the monitoring service in both development and production
+startMonitoringService();
 
 export const metadata = {
   title: "FlixVault",

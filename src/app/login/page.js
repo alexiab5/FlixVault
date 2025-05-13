@@ -21,7 +21,13 @@ export default function Login() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        router.push('/diary');
+        // Check if user is admin and redirect accordingly
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user?.role === 'ADMIN') {
+          router.push('/admin/monitored-users');
+        } else {
+          router.push('/diary');
+        }
       } else {
         setError(result.error);
       }

@@ -16,14 +16,28 @@ export function AuthProvider({ children }) {
     const token = Cookies.get('token');
     const storedUser = localStorage.getItem('user');
     
+    console.log('=== AUTH CONTEXT DEBUG ===');
+    console.log('Token:', token);
+    console.log('Stored User:', storedUser);
+    
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('Parsed User:', parsedUser);
+        console.log('User Role:', parsedUser?.role);
+        console.log('Is Admin Check:', parsedUser?.role === 'ADMIN');
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
     }
+    console.log('========================');
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
+      console.log('=== LOGIN DEBUG ===');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31,6 +45,10 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
+      console.log('Login response:', data);
+      console.log('User role from login:', data.user?.role);
+      console.log('Is admin check from login:', data.user?.role === 'ADMIN');
+      console.log('===================');
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
@@ -57,6 +75,7 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
+      console.log('Register response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');

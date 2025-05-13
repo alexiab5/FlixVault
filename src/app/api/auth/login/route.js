@@ -23,6 +23,8 @@ export async function POST(request) {
       where: { email }
     });
 
+    console.log('Found user:', user);
+
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -70,7 +72,7 @@ export async function POST(request) {
     const token = generateToken(user);
 
     // Return user data (excluding password) and token
-    return NextResponse.json({
+    const responseData = {
       user: {
         id: user.id,
         name: user.name,
@@ -78,7 +80,11 @@ export async function POST(request) {
         role: user.role
       },
       token
-    });
+    };
+
+    console.log('Login response data:', responseData);
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Login error:', error);
