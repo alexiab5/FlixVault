@@ -1,5 +1,9 @@
 import { Worker } from 'worker_threads';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let worker = null;
 
@@ -11,8 +15,9 @@ export function startMonitoringService() {
 
   console.log('Starting monitoring service...');
   
-  // Create a new worker thread
-  worker = new Worker(path.resolve('./src/workers/monitoringWorker.js'));
+  // Create a new worker thread with the correct path resolution
+  const workerPath = path.resolve(__dirname, '../workers/monitoringWorker.js');
+  worker = new Worker(workerPath);
 
   // Handle messages from the worker
   worker.on('message', (message) => {

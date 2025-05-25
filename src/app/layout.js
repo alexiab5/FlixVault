@@ -1,10 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import Header from '@/components/Header';
 import OfflineStatusBanner from '@/components/OfflineStatusBanner';
 import "./globals.css";
 import { ReviewDiaryProvider } from "../context/ReviewDiaryContext";
 import { AuthProvider } from '../context/AuthContext';
 import { startMonitoringService } from '../lib/monitoringService';
+import HeaderWrapper from '@/components/HeaderWrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,12 +37,13 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"
         />
       </head>
-      <body className="h-full min-h-screen bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed overflow-x-hidden pt-16">
+      <body className="h-full min-h-screen overflow-x-hidden pt-16">
         <AuthProvider>
           <ReviewDiaryProvider>
             <OfflineStatusBanner />
-            <Header />
-            {children}
+            <HeaderWrapper>
+              {children}
+            </HeaderWrapper>
           </ReviewDiaryProvider>
         </AuthProvider>
       </body>

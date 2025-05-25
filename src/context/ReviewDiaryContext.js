@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react"
 import reviewApiService from "../services/reviewApiService"
+import { useAuth } from "./AuthContext"
 
 const ReviewDiaryContext = createContext()
 
@@ -13,6 +14,7 @@ export function ReviewDiaryProvider({ children }) {
   const [error, setError] = useState(null)
   const [isNetworkDown, setIsNetworkDown] = useState(false)
   const [isServerDown, setIsServerDown] = useState(false)
+  const { user } = useAuth()
 
   // Store reviews in localStorage when they change and we're online
   useEffect(() => {
@@ -24,6 +26,12 @@ export function ReviewDiaryProvider({ children }) {
   // Initialize the app and load initial reviews
   useEffect(() => {
     const initializeApp = async () => {
+      // Don't fetch reviews if user is not authenticated
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         console.log("Initializing app and loading reviews...");
@@ -88,7 +96,7 @@ export function ReviewDiaryProvider({ children }) {
     };
     
     initializeApp();
-  }, []);
+  }, [user]);
 
   // Set up periodic connectivity checks and event listeners
   useEffect(() => {

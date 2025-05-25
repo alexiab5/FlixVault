@@ -39,16 +39,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="bg-white/10 backdrop-blur-md p-8 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-2xl font-bold text-white mb-6 text-center">Login</h1>
-        
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-white px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-white mb-2">Email</label>
@@ -62,7 +60,6 @@ export default function Login() {
               placeholder="Enter your email"
             />
           </div>
-
           <div>
             <label htmlFor="password" className="block text-white mb-2">Password</label>
             <input
@@ -75,7 +72,6 @@ export default function Login() {
               placeholder="Enter your password"
             />
           </div>
-
           <RegularButton
             type="submit"
             disabled={loading}
@@ -84,7 +80,6 @@ export default function Login() {
             {loading ? 'Logging in...' : 'Login'}
           </RegularButton>
         </form>
-
         <p className="mt-4 text-center text-white">
           Don't have an account?{' '}
           <button

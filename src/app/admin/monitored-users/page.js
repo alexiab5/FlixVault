@@ -91,7 +91,7 @@ export default function MonitoredUsersPage() {
                     <td className="px-6 py-4 border-b text-sm text-red-600">{monitored.reason}</td>
                     <td className="px-6 py-4 border-b text-sm text-gray-900">
                       <ul className="list-disc list-inside">
-                        {monitored.suspiciousActions.actions.map((action, index) => (
+                        {(monitored.suspiciousActions?.actions || []).map((action, index) => (
                           <li key={index}>
                             {action.action} ({action.count} operations in {action.timeWindow}, threshold: {action.threshold})
                           </li>

@@ -1,5 +1,5 @@
-const { parentPort } = require('worker_threads');
-const { PrismaClient } = require('@prisma/client');
+import { parentPort } from 'worker_threads';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
