@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import clsx from "clsx"
 import Icons from "@/components/Icons"
@@ -52,31 +52,107 @@ const debounce = (func, wait) => {
 
 export default function MovieDiary() {
   const { reviews, deleteReview, sortReviews, setReviews, addReview } = useReviewDiary()
-  const [sortOrder, setSortOrder] = useState("desc")
-  const [checkedReview, setCheckedReview] = useState(null)
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
-  const [selectedRatings, setSelectedRatings] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [isGeneratingReviews, setIsGeneratingReviews] = useState(false)
-  const [reviewCount, setReviewCount] = useState(0)
-  const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [csvFile, setCsvFile] = useState(null)
-  const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 })
-  const [displayedReviews, setDisplayedReviews] = useState([])
-  const [observerTarget, setObserverTarget] = useState(null)
-  const [error, setError] = useState('')
-
-  const [editingReview, setEditingReview] = useState(null)
-  const [selectedMovieId, setSelectedMovieId] = useState(null)
-  const [reviewToDelete, setReviewToDelete] = useState(null)
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
+  const [displayedReviews, setDisplayedReviews] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedRatings, setSelectedRatings] = useState([]);
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [hasMore, setHasMore] = useState(true);
+  const [isGeneratingReviews, setIsGeneratingReviews] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+  const [observerTarget, setObserverTarget] = useState(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [checkedReview, setCheckedReview] = useState(null);
+
+  const [editingReview, setEditingReview] = useState(null);
+  const [selectedMovieId, setSelectedMovieId] = useState(null);
+  const [reviewToDelete, setReviewToDelete] = useState(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const { user, logout } = useAuth();
+
+  const loadingRef = useRef(false); // Add this ref to track loading state
+
+  // Load reviews function - moved to top
+  const loadReviews = useCallback(async (page, shouldRefresh = false) => {
+    // Skip if already loading and not refreshing
+    if (loadingRef.current && !shouldRefresh) {
+      console.log('Skipping loadReviews - already loading');
+      return;
+    }
+    
+    console.log('Loading reviews for page:', page, 'shouldRefresh:', shouldRefresh);
+    loadingRef.current = true;
+    setIsLoading(true);
+    setError(''); // Clear any previous errors
+    try {
+      // Build rating filter parameters
+      const ratingParams = selectedRatings.length > 0 
+        ? selectedRatings.map(rating => `rating=${rating}`).join('&')
+        : '';
+      
+      // Always use page 1 if we're refreshing
+      const pageToFetch = shouldRefresh ? 1 : page;
+      const url = `/api/movieReviews?page=${pageToFetch}&limit=${ITEMS_PER_PAGE}&sort=${sortOrder}${ratingParams ? `&${ratingParams}` : ''}`;
+      console.log('Fetching reviews with URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch reviews');
+      }
+      
+      const data = await response.json();
+      console.log('Received data:', {
+        page: data.pagination?.page,
+        totalPages: data.pagination?.totalPages,
+        reviewCount: data.reviews?.length,
+        requestedPage: pageToFetch
+      });
+      
+      if (data.reviews) {
+        if (pageToFetch === 1 || shouldRefresh) {
+          // If it's the first page or we're refreshing, replace all reviews
+          console.log('Setting first page reviews:', data.reviews.length);
+          setDisplayedReviews(data.reviews);
+        } else {
+          // For subsequent pages, append new reviews
+          setDisplayedReviews(prev => {
+            const newReviews = data.reviews.filter(
+              newReview => !prev.some(existingReview => existingReview.id === newReview.id)
+            );
+            console.log('Appending new reviews:', newReviews.length);
+            return [...prev, ...newReviews];
+          });
+        }
+        
+        setHasMore(data.pagination.page < data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      setError(error.message || 'An error occurred while loading reviews');
+    } finally {
+      loadingRef.current = false;
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE]); // Remove isLoading and isRefreshing from dependencies
+
+  // Load reviews when page changes
+  useEffect(() => {
+    if (isRefreshing) {
+      loadReviews(1, true);
+    } else {
+      loadReviews(currentPage, false);
+    }
+  }, [currentPage, loadReviews, isRefreshing]);
 
   // Generate multiple random reviews for testing the sliding window
   const generateMultipleReviews = useCallback(async (count = 50) => {
@@ -111,14 +187,6 @@ export default function MovieDiary() {
     setIsGeneratingReviews(false);
     console.log(`Generated ${reviewCount} random reviews successfully`);
   }, [isGeneratingReviews, addReview, reviews, reviewCount]);
-
- // Generate reviews when the page is first loaded
-  // useEffect(() => {
-  //   // Only generate reviews if there are fewer than 20 reviews
-  //   if (reviews.length < 20) {
-  //     generateMultipleReviews(50);
-  //   }
-  // }, [reviews.length, generateMultipleReviews]);
 
   // Check for a selected movie in the URL parameters when the component mounts
   useEffect(() => {
@@ -188,14 +256,6 @@ export default function MovieDiary() {
       setCheckedReview(null)
     }
   }
-
-  // const navigateToEditReview = (e, reviewId) => {
-  //   e.preventDefault();
-  //   if (reviewId) {
-  //     console.log("Navigating to edit page for review:", reviewId);
-  //     router.push(`/edit-review/${reviewId}`);
-  //   }
-  // }
 
   const handleEditClick = async (e, reviewId) => {
     e.stopPropagation();
@@ -268,14 +328,6 @@ export default function MovieDiary() {
     return reviews.filter((review) => selectedRatings.includes(review.rating));
   }, [reviews, selectedRatings]);
 
-  // Load reviews when page, sort order, or rating filter changes
-  useEffect(() => {
-    console.log('Effect triggered - currentPage:', currentPage, 'isLoading:', isLoading);
-    if (!isLoading || isRefreshing) {
-      loadReviews(currentPage);
-    }
-  }, [currentPage, sortOrder, selectedRatings]);
-
   // Handle review added
   const handleReviewAdded = async (newReview) => {
     console.log('Adding new review to the list');
@@ -290,26 +342,7 @@ export default function MovieDiary() {
     // Otherwise, we need to refresh to maintain proper sorting/filtering
     console.log('Refreshing list to maintain sort/filter order');
     setIsRefreshing(true);
-    
-    // Store current filter state
-    const currentFilters = {
-      sortOrder,
-      selectedRatings: [...selectedRatings]
-    };
-    
-    // Reset pagination state
     setCurrentPage(1);
-    setDisplayedReviews([]);
-    setHasMore(true);
-    
-    // Force a reload of page 1 with current filters
-    await loadReviews(1);
-    
-    // Restore filter state
-    setSortOrder(currentFilters.sortOrder);
-    setSelectedRatings(currentFilters.selectedRatings);
-    
-    setIsRefreshing(false);
   };
 
   // Handle review deleted
@@ -352,10 +385,10 @@ export default function MovieDiary() {
 
   // Function to refresh reviews
   const refreshReviews = async () => {
+    setIsRefreshing(true);
     setCurrentPage(1);
     setDisplayedReviews([]);
     setHasMore(true);
-    await loadReviews(1);
   };
 
   // Set up intersection observer for infinite scrolling
@@ -379,68 +412,6 @@ export default function MovieDiary() {
       }
     };
   }, [hasMore, isLoading, observerTarget, isRefreshing]);
-
-  // Load reviews function
-  const loadReviews = async (page) => {
-    if (isLoading && !isRefreshing) {
-      console.log('Skipping loadReviews - already loading');
-      return;
-    }
-    
-    console.log('Loading reviews for page:', page, 'current state:', { currentPage, isLoading, isRefreshing });
-    setIsLoading(true);
-    setError(''); // Clear any previous errors
-    try {
-      // Build rating filter parameters
-      const ratingParams = selectedRatings.length > 0 
-        ? selectedRatings.map(rating => `rating=${rating}`).join('&')
-        : '';
-      
-      // Always use page 1 if we're refreshing
-      const pageToFetch = isRefreshing ? 1 : page;
-      const url = `/api/movieReviews?page=${pageToFetch}&limit=${ITEMS_PER_PAGE}&sort=${sortOrder}${ratingParams ? `&${ratingParams}` : ''}`;
-      console.log('Fetching reviews with URL:', url);
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch reviews');
-      }
-      
-      const data = await response.json();
-      console.log('Received data:', {
-        page: data.pagination?.page,
-        totalPages: data.pagination?.totalPages,
-        reviewCount: data.reviews?.length,
-        requestedPage: pageToFetch
-      });
-      
-      if (data.reviews) {
-        if (pageToFetch === 1 || isRefreshing) {
-          // If it's the first page or we're refreshing, replace all reviews
-          console.log('Setting first page reviews:', data.reviews.length);
-          setDisplayedReviews(data.reviews);
-        } else {
-          // For subsequent pages, append new reviews
-          setDisplayedReviews(prev => {
-            const newReviews = data.reviews.filter(
-              newReview => !prev.some(existingReview => existingReview.id === newReview.id)
-            );
-            console.log('Appending new reviews:', newReviews.length);
-            return [...prev, ...newReviews];
-          });
-        }
-        
-        setHasMore(data.pagination.page < data.pagination.totalPages);
-      }
-    } catch (error) {
-      console.error('Error loading reviews:', error);
-      setError(error.message || 'An error occurred while loading reviews');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Get highlight class for a review
   const getHighlightClass = (review) => {

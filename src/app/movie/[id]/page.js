@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMovieById } from "D:/MPP/flix-vault/src/lib/movie-data.ts";
+import { getMovieById } from "../../../lib/movie-data.ts";
 import { useReviewDiary } from "../../../context/ReviewDiaryContext";
+import Image from "next/image";
 
 export default function MovieDetail() {
   const { addReview } = useReviewDiary(); // Get addReview function from context
@@ -59,7 +60,13 @@ export default function MovieDetail() {
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-shrink-0">
-            <img src={movie.posterUrl || "/placeholder.svg"} alt={movie.title} className="w-32 h-48 object-cover rounded-md mx-auto" />
+            <Image 
+              src={movie.posterUrl || "/placeholder.svg"} 
+              alt={movie.title} 
+              width={128}
+              height={192}
+              className="w-32 h-48 object-cover rounded-md mx-auto" 
+            />
 
             <div className="flex justify-center mt-4">
               {[1, 2, 3, 4, 5].map((star) => (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
 import { useRouter } from "next/navigation"
 import {
@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
   }
 
   // Function to simulate new data
-  const simulateNewData = () => {
+  const simulateNewData = useCallback(() => {
     // Create a copy of reviews with some random variations for simulation
     if (!reviews || reviews.length === 0) return
 
@@ -82,7 +82,7 @@ export default function AnalyticsPage() {
     })
 
     setSimulatedData(simulatedReviews)
-  }
+  }, [reviews]);
 
   // Simulate real-time data changes
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
     }, 5000) // Update every 5 seconds
 
     return () => clearInterval(interval)
-  }, [])
+  }, [simulateNewData])
 
   // Calculate rating distribution data
   const ratingDistributionData = useMemo(() => {
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
     })
 
     return distribution
-  }, [reviews, simulatedData, refreshKey])
+  }, [reviews, simulatedData])
 
   // Calculate movies watched over time
   const moviesOverTimeData = useMemo(() => {
@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
         avgRating: item.count > 0 ? item.totalRating / item.count : 0,
       }))
       .sort((a, b) => String(a.date).localeCompare(String(b.date)))
-  }, [reviews, simulatedData, refreshKey])
+  }, [reviews, simulatedData])
 
   // Calculate release year distribution
   const releaseYearData = useMemo(() => {
@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
       // Otherwise fall back to string comparison
       return String(a.name).localeCompare(String(b.name))
     })
-  }, [reviews, simulatedData, refreshKey])
+  }, [reviews, simulatedData])
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -16,8 +16,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Start the monitoring service in both development and production
-startMonitoringService();
+// Only start monitoring service in production and when not in a build context
+if (process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
+  startMonitoringService();
+}
 
 export const metadata = {
   title: "FlixVault",
@@ -28,22 +30,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com"/>
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true"/>
-        <link 
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet"
-        />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"
-        />
       </head>
-      <body className="h-full min-h-screen overflow-x-hidden pt-16">
+      <body className={`${geistSans.variable} ${geistMono.variable} h-full min-h-screen overflow-x-hidden pt-16`}>
         <AuthProvider>
           <ReviewDiaryProvider>
+            <HeaderWrapper />
             <OfflineStatusBanner />
-            <HeaderWrapper>
-              {children}
-            </HeaderWrapper>
+            {children}
           </ReviewDiaryProvider>
         </AuthProvider>
       </body>

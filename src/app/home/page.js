@@ -26,7 +26,7 @@ export default function Home() {
       <main className="container mx-auto px-4 pt-16 flex-1 flex flex-col items-center justify-between">
         <h1 className="text-6xl font-bold text-white mb-10 mt-10">Welcome back, Alexia!</h1>
 
-        <h2 className="text-2xl text-white mb-16">Here's what you've been up to lately...</h2>
+        <h2 className="text-2xl text-white mb-16">Here&apos;s what you&apos;ve been up to lately...</h2>
 
         {/* Recent Movies Grid */}
         <div className="flex justify-center gap-6 mb-10 flex-wrap">

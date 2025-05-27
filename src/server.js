@@ -8,6 +8,18 @@ import { reviewsStore } from './lib/apiStore.js';
 const app = express();
 const httpServer = createServer(app);
 
+// Production logging middleware
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`${req.method} ${req.url} ${res.statusCode} in ${duration}ms`);
+    });
+    next();
+  });
+}
+
 // Initialize Socket.IO with the HTTP server
 const io = initSocketServer(httpServer);
 
