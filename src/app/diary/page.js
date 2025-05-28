@@ -661,23 +661,23 @@ export default function MovieDiary() {
             )}
           </div>
 
-          <div className="grid grid-cols-7 text-white text-lg font-medium mb-4 border-b border-white/20 pb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 text-white text-sm md:text-lg font-medium mb-4 border-b border-white/20 pb-2">
             <div className="text-center">Year</div>
             <div className="text-center">Month</div>
-            <div className="text-center">Day</div>
+            <div className="text-center hidden md:block">Day</div>
             <div className="text-center">Movie</div>
-            <div className="text-center">Released</div>
+            <div className="text-center hidden lg:block">Released</div>
             <div className="text-center">Rating</div>
             <div className="text-center">Review</div>
           </div>
 
-          <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-8 reviews-container">
+          <div className="max-h-[calc(5*4rem)] overflow-y-auto space-y-4 md:space-y-8 reviews-container">
             {displayedReviews.length > 0 ? (
               displayedReviews.map((review) => (
                 <div
                   key={`${review.id}-${review.createdAt}`}
                   className={clsx(
-                    "grid grid-cols-7 items-center text-white border-b border-white/10 pb-8 rounded-lg transition-colors",
+                    "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 items-center text-white border-b border-white/10 pb-4 md:pb-8 rounded-lg transition-colors text-sm md:text-base",
                     getHighlightClass(review),
                   )}
                 >
@@ -685,17 +685,17 @@ export default function MovieDiary() {
                     <span>{new Date(review.createdAt).getFullYear()}</span>
                   </div>
                   <div className="text-center">{new Date(review.createdAt).toLocaleString("default", { month: "short" }).toUpperCase()}</div>
-                  <div className="text-center">{String(new Date(review.createdAt).getDate()).padStart(2, "0")}</div>
+                  <div className="text-center hidden md:block">{String(new Date(review.createdAt).getDate()).padStart(2, "0")}</div>
                   <div className="flex justify-center">
                     <Image
                       src={review.movie?.posterPath || "/placeholder.svg"}
                       alt={`Poster for ${review.movie?.title || 'Movie'}`}
                       width={70}
                       height={100}
-                      className="rounded-md"
+                      className="rounded-md w-12 h-16 md:w-16 md:h-24 lg:w-20 lg:h-28 object-cover"
                     />
                   </div>
-                  <div className="text-center">{new Date(review.movie?.releaseDate).getFullYear()}</div>
+                  <div className="text-center hidden lg:block">{new Date(review.movie?.releaseDate).getFullYear()}</div>
                   <div className="text-center flex justify-center">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span key={i} className={i < review.rating ? "text-white" : "text-white/30"}>

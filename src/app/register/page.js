@@ -34,16 +34,17 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[url('/images/dynamic-gradient-grainy-bg.jpg')] bg-cover bg-center bg-fixed">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-white mb-2">Welcome to FlixVault!</h1>
+        <p className="text-white/80 text-xl">Your online movie diary awaits...</p>
+      </div>
       <div className="bg-white/10 backdrop-blur-md p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-6 text-center">Register</h1>
-        
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-white px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-white mb-2">Name</label>
@@ -97,7 +98,7 @@ export default function Register() {
           Already have an account?{' '}
           <button
             onClick={() => router.push('/login')}
-            className="text-blue-400 hover:text-blue-300"
+            className="text-blue-400 hover:text-blue-300 cursor-pointer"
           >
             Login
           </button>

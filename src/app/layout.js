@@ -34,9 +34,10 @@ export default function RootLayout({ children }) {
       <body className={`${geistSans.variable} ${geistMono.variable} h-full min-h-screen overflow-x-hidden pt-16`}>
         <AuthProvider>
           <ReviewDiaryProvider>
-            <HeaderWrapper />
-            <OfflineStatusBanner />
-            {children}
+            <HeaderWrapper>
+              <OfflineStatusBanner />
+              {children}
+            </HeaderWrapper>
           </ReviewDiaryProvider>
         </AuthProvider>
       </body>

@@ -113,38 +113,36 @@ export default function EditReviewModal({ review, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-lg z-[9999] flex items-center justify-center p-4">
-      <div className="bg-pink-200 rounded-3xl p-8 w-full max-w-5xl relative shadow-2xl border border-pink-300">
-        {/* Modal header with title */}
-
+      <div className="bg-pink-200 rounded-3xl p-4 md:p-8 w-full max-w-5xl relative shadow-2xl border border-pink-300">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 bg-pink-300 hover:bg-pink-400 text-pink-800 rounded-full w-10 h-10 flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-4 right-4 md:top-6 md:right-6 bg-pink-300 hover:bg-pink-400 text-pink-800 rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-colors cursor-pointer"
         >
           ✕
         </button>
 
         {/* Movie title and details */}
-        <div className="text-center mb-6">
-          <h3 className="text-2xl font-bold text-pink-800 mb-2">
+        <div className="text-center mb-4 md:mb-6">
+          <h3 className="text-xl md:text-2xl font-bold text-pink-800 mb-2">
             {movieTitle} ({releaseYear})
           </h3>
           {director && (
-            <p className="text-sm text-pink-700 mb-1">
+            <p className="text-xs md:text-sm text-pink-700 mb-1">
               Directed by {director}
             </p>
           )}
           {genres && genres.length > 0 && (
-            <p className="text-sm text-pink-700">
+            <p className="text-xs md:text-sm text-pink-700">
               {genres.join(', ')}
             </p>
           )}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-8">
           {/* Movie poster and rating */}
           <div className="w-full md:w-1/3 flex flex-col items-center">
-            <div className="w-48 h-72 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
+            <div className="w-32 h-48 md:w-48 md:h-72 overflow-hidden rounded-xl shadow-lg border-2 border-pink-300">
               <Image
                 src={posterPath || "/placeholder.svg"}
                 alt={movieTitle}
@@ -155,18 +153,18 @@ export default function EditReviewModal({ review, onClose, onSave }) {
             </div>
 
             {/* Rating */}
-            <div className="mt-6 flex flex-col items-center">
-              <span className="text-pink-800 text-lg font-medium mb-2">Rating</span>
+            <div className="mt-4 md:mt-6 flex flex-col items-center">
+              <span className="text-pink-800 text-base md:text-lg font-medium mb-2">Rating</span>
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     onClick={() => handleRatingChange(star)}
-                    className="text-4xl focus:outline-none cursor-pointer px-1"
+                    className="text-3xl md:text-4xl focus:outline-none cursor-pointer px-1"
                   >
                     <span
                       className={star <= rating ? "text-pink-500" : "text-pink-300"}
-                      style={{ fontSize: "1.75rem" }}
+                      style={{ fontSize: "1.5rem" }}
                     >
                       ★
                     </span>
@@ -184,23 +182,23 @@ export default function EditReviewModal({ review, onClose, onSave }) {
                 setReviewText(e.target.value)
                 setError("")
               }}
-              className="w-full h-72 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner"
+              className="w-full h-48 md:h-72 p-4 rounded-xl bg-pink-100 text-pink-900 placeholder-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-400 border border-pink-300 shadow-inner text-sm md:text-base"
               placeholder="Write your review here..."
             />
             {error && (
-              <p className="text-red-600 text-sm mt-2">{error}</p>
+              <p className="text-red-600 text-xs md:text-sm mt-2">{error}</p>
             )}
-            <p className="text-pink-700 text-sm mt-2">
+            <p className="text-pink-700 text-xs md:text-sm mt-2">
               {reviewText.length}/1000 characters
             </p>
           </div>
         </div>
 
         {/* Save button */}
-        <div className="mt-8 flex justify-center">
+        <div className="mt-6 md:mt-8 flex justify-center">
           <button
             onClick={handleSave}
-            className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 px-6 rounded-full transition-colors cursor-pointer"
+            className="bg-pink-500 hover:bg-pink-600 text-white text-base md:text-lg font-medium py-2 md:py-2.5 px-8 md:px-14 rounded-full shadow-lg transition-colors duration-300 cursor-pointer"
           >
             Save Changes
           </button>
