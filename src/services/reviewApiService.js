@@ -234,19 +234,43 @@ class ReviewApiService {
 
   // Add WebSocket methods
   connectSocket() {
+    // Only connect if not already connected
     if (this.socket) return this.socket;
     
-    this.socket = io('http://localhost:3000', {
+    // Use the current window location to determine the WebSocket URL
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/socket.io`;
+    
+    console.log('Attempting to connect to WebSocket at:', wsUrl);
+    
+    this.socket = io(wsUrl, {
       auth: {
         token: localStorage.getItem('token')
-      }
+      },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
     
-    console.log('WebSocket connection established');
+    this.socket.on('connect', () => {
+      console.log('WebSocket connection established');
+    });
+    
+    this.socket.on('connect_error', (error) => {
+      console.log('WebSocket connection error:', error);
+    });
+    
+    this.socket.on('disconnect', (reason) => {
+      console.log('WebSocket disconnected:', reason);
+    });
+    
     return this.socket;
   }
   
   onNewReview(callback) {
+    // Only connect if a callback is provided
+    if (!callback) return () => {};
     const socket = this.connectSocket();
     socket.on('newReview', callback);
     this.socketListeners.push({ event: 'newReview', callback });
@@ -254,6 +278,8 @@ class ReviewApiService {
   }
   
   onReviewUpdated(callback) {
+    // Only connect if a callback is provided
+    if (!callback) return () => {};
     const socket = this.connectSocket();
     socket.on('reviewUpdated', callback);
     this.socketListeners.push({ event: 'reviewUpdated', callback });
@@ -261,6 +287,8 @@ class ReviewApiService {
   }
   
   onReviewDeleted(callback) {
+    // Only connect if a callback is provided
+    if (!callback) return () => {};
     const socket = this.connectSocket();
     socket.on('reviewDeleted', callback);
     this.socketListeners.push({ event: 'reviewDeleted', callback });
@@ -268,6 +296,8 @@ class ReviewApiService {
   }
   
   onReviewStats(callback) {
+    // Only connect if a callback is provided
+    if (!callback) return () => {};
     const socket = this.connectSocket();
     socket.on('reviewStats', callback);
     this.socketListeners.push({ event: 'reviewStats', callback });

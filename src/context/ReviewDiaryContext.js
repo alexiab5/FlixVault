@@ -196,91 +196,36 @@ export function ReviewDiaryProvider({ children }) {
 
   // WebSocket connection and handlers
   useEffect(() => {
-    // Only connect to WebSocket if online and server is up
-    if (!isNetworkDown && !isServerDown) {
-      console.log("Setting up WebSocket connection");
-      
-      // Listen for new reviews
-      const removeNewReviewListener = reviewApiService.onNewReview((newReview) => {
-        console.log("Received new review via WebSocket:", newReview);
-        setReviews(prevReviews => {
-          // Check if review already exists (to avoid duplicates)
-          const exists = prevReviews.some(review => review.id === newReview.id);
-          if (exists) {
-            return prevReviews;
-          }
-          
-          // Ensure the review has all necessary properties
-          const processedReview = {
-            ...newReview,
-            createdAt: newReview.createdAt || new Date().toISOString(),
-            offline: false,
-            id: String(newReview.id) // Ensure consistent ID format
-          };
-          
-          const updatedReviews = [processedReview, ...prevReviews];
-          
-          // Update localStorage
-          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
-          
-          // Update filtered views if we have a filter active
-          if (currentFilter === null || currentFilter === processedReview.rating) {
-            setFilteredReviews(prev => [processedReview, ...prev]);
-          }
-          
-          return updatedReviews;
-        });
+    // Only connect to WebSocket if explicitly enabled
+    const enableWebSocket = false; // Set this to true when you want to use WebSockets
+    
+    if (enableWebSocket && !isNetworkDown && !isServerDown) {
+      const unsubscribeNewReview = reviewApiService.onNewReview((newReview) => {
+        setReviews(prevReviews => [...prevReviews, newReview]);
       });
 
-      // Listen for review updates
-      const removeUpdateListener = reviewApiService.onReviewUpdated((updatedReview) => {
-        console.log("Received review update via WebSocket:", updatedReview);
-        setReviews(prevReviews => {
-          const updatedReviews = prevReviews.map(review => 
-            review.id === updatedReview.id ? { ...updatedReview, offline: false } : review
-          );
-          
-          // Update localStorage
-          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
-          
-          // Update filtered reviews if necessary
-          if (currentFilter === null || currentFilter === updatedReview.rating) {
-            setFilteredReviews(prev => prev.map(review => 
-              review.id === updatedReview.id ? { ...updatedReview, offline: false } : review
-            ));
-          } else {
-            setFilteredReviews(prev => prev.filter(review => review.id !== updatedReview.id));
-          }
-          
-          return updatedReviews;
-        });
+      const unsubscribeReviewUpdated = reviewApiService.onReviewUpdated((updatedReview) => {
+        setReviews(prevReviews => 
+          prevReviews.map(review => 
+            review.id === updatedReview.id ? updatedReview : review
+          )
+        );
       });
 
-      // Listen for review deletions
-      const removeDeleteListener = reviewApiService.onReviewDeleted((deletedId) => {
-        console.log("Received review deletion via WebSocket:", deletedId);
-        setReviews(prevReviews => {
-          const updatedReviews = prevReviews.filter(review => review.id !== deletedId);
-          
-          // Update localStorage
-          localStorage.setItem('cachedReviews', JSON.stringify(updatedReviews));
-          
-          // Update filtered reviews
-          setFilteredReviews(prev => prev.filter(review => review.id !== deletedId));
-          
-          return updatedReviews;
-        });
+      const unsubscribeReviewDeleted = reviewApiService.onReviewDeleted((deletedReviewId) => {
+        setReviews(prevReviews => 
+          prevReviews.filter(review => review.id !== deletedReviewId)
+        );
       });
-      
-      // Clean up on component unmount or when network/server status changes
+
       return () => {
-        removeNewReviewListener();
-        removeUpdateListener();
-        removeDeleteListener();
+        unsubscribeNewReview();
+        unsubscribeReviewUpdated();
+        unsubscribeReviewDeleted();
         reviewApiService.disconnectSocket();
       };
     }
-  }, [isNetworkDown, isServerDown, currentFilter]);
+  }, [isNetworkDown, isServerDown]);
     
   const addReview = async (newReview) => {
     try {

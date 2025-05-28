@@ -45,11 +45,20 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", "#00C49F", "#FFBB28", "#FF8042"]
 
 export default function AnalyticsPage() {
-  const { reviews } = useReviewDiary()
+  const { reviews, isLoading: contextLoading } = useReviewDiary()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [simulatedData, setSimulatedData] = useState(null)
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date())
+
+  // Debug logging for initial load and reviews changes
+  useEffect(() => {
+    console.log("Statistics page - Reviews state:", {
+      reviewCount: reviews.length,
+      isLoading: contextLoading,
+      timestamp: new Date().toISOString()
+    })
+    setLastUpdateTime(new Date())
+  }, [reviews, contextLoading])
 
   // Function to navigate back to diary
   const handleBackToDiary = () => {
@@ -58,47 +67,18 @@ export default function AnalyticsPage() {
 
   // Function to manually refresh data
   const handleRefresh = () => {
+    console.log("Statistics page - Manual refresh triggered")
     setIsLoading(true)
-    // Simulate async data fetching
+    // Force a re-render by updating the loading state
     setTimeout(() => {
-      setRefreshKey((prev) => prev + 1)
       setIsLoading(false)
-    }, 800)
+      setLastUpdateTime(new Date())
+    }, 300)
   }
-
-  // Function to simulate new data
-  const simulateNewData = useCallback(() => {
-    // Create a copy of reviews with some random variations for simulation
-    if (!reviews || reviews.length === 0) return
-
-    const simulatedReviews = [...reviews].map((review) => {
-      // Make sure rating exists before applying variation
-      const baseRating = review.rating || 3 // Default to 3 if no rating
-      return {
-        ...review,
-        // Add a small random variation to ratings for simulation purposes
-        simulatedRating: Math.max(1, Math.min(5, baseRating + (Math.random() * 0.6 - 0.3))),
-      }
-    })
-
-    setSimulatedData(simulatedReviews)
-  }, [reviews]);
-
-  // Simulate real-time data changes
-  useEffect(() => {
-    // Initial data simulation
-    simulateNewData()
-
-    // Set up interval for real-time updates
-    const interval = setInterval(() => {
-      simulateNewData()
-    }, 5000) // Update every 5 seconds
-
-    return () => clearInterval(interval)
-  }, [simulateNewData])
 
   // Calculate rating distribution data
   const ratingDistributionData = useMemo(() => {
+    console.log("Statistics page - Calculating rating distribution")
     const distribution = [
       { name: "5 Stars", count: 0 },
       { name: "4 Stars", count: 0 },
@@ -107,25 +87,22 @@ export default function AnalyticsPage() {
       { name: "1 Star", count: 0 },
     ]
 
-    const dataSource = simulatedData || reviews
-
-    dataSource.forEach((review) => {
+    reviews.forEach((review) => {
       // Make sure rating exists and is valid
-      const rating = Math.round(review.simulatedRating || review.rating || 0)
+      const rating = Math.round(review.rating || 0)
       if (rating >= 1 && rating <= 5) {
         distribution[5 - rating].count += 1
       }
     })
 
     return distribution
-  }, [reviews, simulatedData])
+  }, [reviews])
 
   // Calculate movies watched over time
   const moviesOverTimeData = useMemo(() => {
     const monthlyData = {}
-    const dataSource = simulatedData || reviews
 
-    dataSource.forEach((review) => {
+    reviews.forEach((review) => {
       // Make sure year and month exist
       if (!review.year || !review.month) return
 
@@ -139,7 +116,7 @@ export default function AnalyticsPage() {
         }
       }
       monthlyData[dateKey].count += 1
-      monthlyData[dateKey].totalRating += review.simulatedRating || review.rating || 0
+      monthlyData[dateKey].totalRating += review.rating || 0
     })
 
     // Calculate average ratings and sort by date
@@ -149,14 +126,13 @@ export default function AnalyticsPage() {
         avgRating: item.count > 0 ? item.totalRating / item.count : 0,
       }))
       .sort((a, b) => String(a.date).localeCompare(String(b.date)))
-  }, [reviews, simulatedData])
+  }, [reviews])
 
   // Calculate release year distribution
   const releaseYearData = useMemo(() => {
     const yearData = {}
-    const dataSource = simulatedData || reviews
 
-    dataSource.forEach((review) => {
+    reviews.forEach((review) => {
       // Make sure released exists and convert to string
       const year = review.released ? String(review.released) : "Unknown"
       if (!yearData[year]) {
@@ -182,7 +158,7 @@ export default function AnalyticsPage() {
       // Otherwise fall back to string comparison
       return String(a.name).localeCompare(String(b.name))
     })
-  }, [reviews, simulatedData])
+  }, [reviews])
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -192,10 +168,10 @@ export default function AnalyticsPage() {
           <Button
             variant="primary"
             onClick={handleRefresh}
-            disabled={isLoading}
-            className={isLoading ? "opacity-50 cursor-not-allowed" : ""}
+            disabled={isLoading || contextLoading}
+            className={isLoading || contextLoading ? "opacity-50 cursor-not-allowed" : ""}
           >
-            {isLoading ? "Refreshing..." : "Refresh Data"}
+            {isLoading || contextLoading ? "Refreshing..." : "Refresh Data"}
           </Button>
           <Button variant="primary" onClick={handleBackToDiary}>
             Back to Diary
@@ -316,11 +292,11 @@ export default function AnalyticsPage() {
             </div>
           </Card>
 
-          {/* Real-time update indicator */}
+          {/* Last update indicator */}
           <div className="col-span-1 md:col-span-2 text-center text-white/60 text-sm">
             <div className="flex items-center justify-center">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              Data updates automatically every 5 seconds. Last update: {new Date().toLocaleTimeString()}
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              Last update: {lastUpdateTime.toLocaleTimeString()}
             </div>
           </div>
         </div>
