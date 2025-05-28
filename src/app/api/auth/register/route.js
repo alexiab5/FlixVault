@@ -41,7 +41,8 @@ export async function POST(request) {
         email,
         password: hashedPassword,
         role: 'USER',
-        isActive: true
+        isActive: true,
+        lastLoginAt: new Date()
       }
     });
 

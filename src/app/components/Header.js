@@ -48,6 +48,7 @@ export default function Header() {
                   <button 
                     onClick={logout}
                     className="hover:underline"
+                    style={{ cursor: 'pointer' }}
                   >
                     Logout
                   </button>

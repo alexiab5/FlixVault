@@ -240,10 +240,10 @@ export default function MovieDiary() {
   const specialReviews = useMemo(() => {
     if (!reviews.length) return {}
 
-    // Sort by date (assuming year, month, day format)
+    // Sort by date using createdAt
     const sortedByDate = [...reviews].sort((a, b) => {
-      const dateA = new Date(`${a.year}-${a.month}-${a.day}`)
-      const dateB = new Date(`${b.year}-${b.month}-${b.day}`)
+      const dateA = new Date(a.createdAt)
+      const dateB = new Date(b.createdAt)
       return dateB - dateA // Most recent first
     })
 
@@ -253,10 +253,18 @@ export default function MovieDiary() {
     const mostRecent1Star = sortedByDate.find(review => review.rating === 1)?.id
 
     // Get most recently released movie
-    const mostRecentRelease = [...reviews].sort((a, b) => b.released - a.released)[0]?.id
+    const mostRecentRelease = [...reviews].sort((a, b) => {
+      const dateA = new Date(a.movie?.releaseDate || a.released)
+      const dateB = new Date(b.movie?.releaseDate || b.released)
+      return dateB - dateA
+    })[0]?.id
 
     // Get oldest movie in the collection
-    const oldestMovie = [...reviews].sort((a, b) => a.released - b.released)[0]?.id
+    const oldestMovie = [...reviews].sort((a, b) => {
+      const dateA = new Date(a.movie?.releaseDate || a.released)
+      const dateB = new Date(b.movie?.releaseDate || b.released)
+      return dateA - dateB
+    })[0]?.id
 
     return {
       mostRecent5Star,
@@ -366,10 +374,10 @@ export default function MovieDiary() {
   const handleReviewAdded = async (newReview) => {
     console.log('Adding new review to the list');
     
-    // If we're sorting by date (desc) and not filtering by rating,
-    // we can just add the new review to the top of the list
+    // Update both displayedReviews and the context's reviews state
     if (sortOrder === 'desc' && selectedRatings.length === 0) {
       setDisplayedReviews(prev => [newReview, ...prev]);
+      setReviews(prev => [newReview, ...prev]);
       return;
     }
     
@@ -769,9 +777,17 @@ export default function MovieDiary() {
                   setDisplayedReviews(prev => 
                     prev.filter(review => review.id !== updatedReview.id)
                   );
+                  setReviews(prev => 
+                    prev.filter(review => review.id !== updatedReview.id)
+                  );
                 } else {
                   // If it still matches, update it
                   setDisplayedReviews(prev => 
+                    prev.map(review => 
+                      review.id === updatedReview.id ? updatedReview : review
+                    )
+                  );
+                  setReviews(prev => 
                     prev.map(review => 
                       review.id === updatedReview.id ? updatedReview : review
                     )
@@ -780,6 +796,11 @@ export default function MovieDiary() {
               } else {
                 // No filters active, just update the review
                 setDisplayedReviews(prev => 
+                  prev.map(review => 
+                    review.id === updatedReview.id ? updatedReview : review
+                  )
+                );
+                setReviews(prev => 
                   prev.map(review => 
                     review.id === updatedReview.id ? updatedReview : review
                   )
