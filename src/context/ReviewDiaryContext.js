@@ -616,17 +616,24 @@ export function ReviewDiaryProvider({ children }) {
     const headers = ['Movie Title', 'Release Year', 'Rating', 'Content', 'Created At', 'Updated At'];
     const csvRows = [
       headers.join(','),
-      ...reviews.map(review => [
-        `"${(review.movie?.title || '').replace(/"/g, '""')}"`,
-        new Date(review.movie?.releaseDate).getFullYear(),
-        review.rating,
-        `"${(review.content || '').replace(/"/g, '""')}"`,
-        review.createdAt,
-        review.updatedAt
-      ].join(','))
+      ...reviews.map(review => {
+        // Ensure all fields are properly escaped and quoted
+        const row = [
+          `"${(review.movie?.title || '').replace(/"/g, '""')}"`,
+          new Date(review.movie?.releaseDate).getFullYear(),
+          review.rating,
+          `"${(review.content || '').replace(/\n/g, '\\n').replace(/"/g, '""')}"`,
+          review.createdAt,
+          review.updatedAt
+        ];
+        return row.join(',');
+      })
     ];
 
+    // Join all rows with newlines
     const csvContent = csvRows.join('\n');
+    console.log('CSV Content:', csvContent); // Debug log
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -755,7 +762,8 @@ export function ReviewDiaryProvider({ children }) {
                   if (!value) {
                     throw new Error('Review content cannot be empty');
                   }
-                  review.content = value;
+                  // Convert \n back to actual newlines
+                  review.content = value.replace(/\\n/g, '\n');
                   break;
                 case 'Created At':
                   const createdAt = new Date(value);
