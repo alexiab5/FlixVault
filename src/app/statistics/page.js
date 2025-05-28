@@ -124,10 +124,12 @@ export default function AnalyticsPage() {
     const monthlyData = {}
 
     reviews.forEach((review) => {
-      // Make sure year and month exist
-      if (!review.year || !review.month) return
+      // Get the date from the review's createdAt field
+      const reviewDate = new Date(review.createdAt)
+      const year = reviewDate.getFullYear()
+      const month = reviewDate.toLocaleString('default', { month: 'short' }).toUpperCase()
+      const dateKey = `${year}-${month}`
 
-      const dateKey = `${review.year}-${review.month}`
       if (!monthlyData[dateKey]) {
         monthlyData[dateKey] = {
           date: dateKey,
@@ -154,8 +156,10 @@ export default function AnalyticsPage() {
     const yearData = {}
 
     reviews.forEach((review) => {
-      // Make sure released exists and convert to string
-      const year = review.released ? String(review.released) : "Unknown"
+      // Get the release year from the movie's releaseDate
+      const releaseDate = review.movie?.releaseDate
+      const year = releaseDate ? new Date(releaseDate).getFullYear().toString() : "Unknown"
+      
       if (!yearData[year]) {
         yearData[year] = {
           name: year,
