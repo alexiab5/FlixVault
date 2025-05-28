@@ -521,7 +521,21 @@ export default function MovieDiary() {
               disabled={importProgress.active}
             />
           </label>
+
+          <button
+            onClick={handleSearchPageNavigation}
+            className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 cursor-pointer"
+          >
+            <Icons.Plus className="w-4 h-4" />
+            Add Review
+          </button>
         </div>
+        
+        {displayedReviews.length === 0 && (
+          <p className="text-white/70 text-sm mb-4">
+            Click "Add Review" to search for movies and add your first review!
+          </p>
+        )}
         
         {/* Import Loading Spinner */}
         {importProgress.active && (
