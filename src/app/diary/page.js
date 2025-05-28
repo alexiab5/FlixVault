@@ -50,6 +50,13 @@ const debounce = (func, wait) => {
   };
 };
 
+// Development-only logging utility
+const devLog = (...args) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 export default function MovieDiary() {
   const { reviews, deleteReview, sortReviews, setReviews, addReview, exportReviews, importReviews } = useReviewDiary()
   const [displayedReviews, setDisplayedReviews] = useState([]);
@@ -89,11 +96,11 @@ export default function MovieDiary() {
   const loadReviews = useCallback(async (page, shouldRefresh = false) => {
     // Skip if already loading and not refreshing
     if (loadingRef.current && !shouldRefresh) {
-      console.log('Skipping loadReviews - already loading');
+      devLog('Skipping loadReviews - already loading');
       return;
     }
     
-    console.log('Loading reviews for page:', page, 'shouldRefresh:', shouldRefresh);
+    devLog('Loading reviews for page:', page, 'shouldRefresh:', shouldRefresh);
     loadingRef.current = true;
     setIsLoading(true);
     setError(''); // Clear any previous errors
@@ -106,7 +113,7 @@ export default function MovieDiary() {
       // Always use page 1 if we're refreshing
       const pageToFetch = shouldRefresh ? 1 : page;
       const url = `/api/movieReviews?page=${pageToFetch}&limit=${ITEMS_PER_PAGE}&sort=${sortOrder}${ratingParams ? `&${ratingParams}` : ''}`;
-      console.log('Fetching reviews with URL:', url);
+      devLog('Fetching reviews with URL:', url);
       
       const response = await fetch(url);
       
@@ -116,7 +123,7 @@ export default function MovieDiary() {
       }
       
       const data = await response.json();
-      console.log('Received data:', {
+      devLog('Received data:', {
         page: data.pagination?.page,
         totalPages: data.pagination?.totalPages,
         reviewCount: data.reviews?.length,
@@ -126,7 +133,7 @@ export default function MovieDiary() {
       if (data.reviews) {
         if (pageToFetch === 1 || shouldRefresh) {
           // If it's the first page or we're refreshing, replace all reviews
-          console.log('Setting first page reviews:', data.reviews.length);
+          devLog('Setting first page reviews:', data.reviews.length);
           setDisplayedReviews(data.reviews);
           setReviews(data.reviews);
         } else {
@@ -134,7 +141,7 @@ export default function MovieDiary() {
           const newReviews = data.reviews.filter(
             newReview => !displayedReviewsRef.current.some(existingReview => existingReview.id === newReview.id)
           );
-          console.log('Appending new reviews:', newReviews.length);
+          devLog('Appending new reviews:', newReviews.length);
           const updatedReviews = [...displayedReviewsRef.current, ...newReviews];
           setDisplayedReviews(updatedReviews);
           setReviews(updatedReviews);
@@ -143,14 +150,14 @@ export default function MovieDiary() {
         setHasMore(data.pagination.page < data.pagination.totalPages);
       }
     } catch (error) {
-      console.error('Error loading reviews:', error);
+      devLog('Error loading reviews:', error);
       setError(error.message || 'An error occurred while loading reviews');
     } finally {
       loadingRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE, setReviews]); // Remove displayedReviews from dependencies
+  }, [selectedRatings, sortOrder, setReviews]);
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
@@ -195,7 +202,7 @@ export default function MovieDiary() {
     setIsGeneratingReviews(true);
     setReviewCount(0);
     
-    console.log(`Generating ${count} random reviews for testing...`);
+    devLog(`Generating ${count} random reviews for testing...`);
     
     // Track existing IDs to avoid duplicates
     const existingIds = new Set(reviews.map(review => review.id));
@@ -205,7 +212,7 @@ export default function MovieDiary() {
       
       // Skip if we already have a review with this ID
       if (existingIds.has(newReview.id)) {
-        console.log(`Skipping duplicate review with ID: ${newReview.id}`);
+        devLog(`Skipping duplicate review with ID: ${newReview.id}`);
         continue;
       }
       
@@ -219,7 +226,7 @@ export default function MovieDiary() {
     }
     
     setIsGeneratingReviews(false);
-    console.log(`Generated ${reviewCount} random reviews successfully`);
+    devLog(`Generated ${reviewCount} random reviews successfully`);
   }, [isGeneratingReviews, addReview, reviews, reviewCount]);
 
   // Check for a selected movie in the URL parameters when the component mounts
@@ -318,10 +325,10 @@ export default function MovieDiary() {
         };
         setEditingReview(formattedReview);
       } else {
-        console.error('Review not found:', reviewId);
+        devLog('Review not found:', reviewId);
       }
     } catch (error) {
-      console.error('Error fetching review for edit:', error);
+      devLog('Error fetching review for edit:', error);
     }
   };
 
@@ -372,7 +379,7 @@ export default function MovieDiary() {
 
   // Handle review added
   const handleReviewAdded = async (newReview) => {
-    console.log('Adding new review to the list');
+    devLog('Adding new review to the list');
     
     // Update both displayedReviews and the context's reviews state
     if (sortOrder === 'desc' && selectedRatings.length === 0) {
@@ -382,7 +389,7 @@ export default function MovieDiary() {
     }
     
     // Otherwise, we need to refresh to maintain proper sorting/filtering
-    console.log('Refreshing list to maintain sort/filter order');
+    devLog('Refreshing list to maintain sort/filter order');
     setIsRefreshing(true);
     setCurrentPage(1);
   };
@@ -411,7 +418,7 @@ export default function MovieDiary() {
         // Refresh the list to ensure proper pagination
         await refreshReviews();
       } catch (error) {
-        console.error('Error deleting review:', error);
+        devLog('Error deleting review:', error);
       }
     }
   };
@@ -455,8 +462,8 @@ export default function MovieDiary() {
 
   // Remove the old exportToCsv function and replace with:
   const handleExport = () => {
-    console.log('Displayed Reviews:', displayedReviews);
-    console.log('Context Reviews:', reviews);
+    devLog('Displayed Reviews:', displayedReviews);
+    devLog('Context Reviews:', reviews);
     
     // Use displayedReviews since that's what's shown on the page
     if (!displayedReviews || displayedReviews.length === 0) {
@@ -474,7 +481,7 @@ export default function MovieDiary() {
       }
     }));
     
-    console.log('Exporting reviews:', reviewsToExport);
+    devLog('Exporting reviews:', reviewsToExport);
     exportReviews(reviewsToExport);
   }
 
@@ -489,7 +496,7 @@ export default function MovieDiary() {
       // Refresh the reviews list
       await refreshReviews()
     } catch (error) {
-      console.error('Error importing reviews:', error)
+      devLog('Error importing reviews:', error)
       alert('Failed to import reviews: ' + error.message)
     } finally {
       setImportProgress({ active: false })
@@ -533,7 +540,7 @@ export default function MovieDiary() {
         
         {displayedReviews.length === 0 && (
           <p className="text-white/70 text-sm mb-4">
-            Click "Add Review" to search for movies and add your first review!
+            Click &quot;Add Review&quot; to search for movies and add your first review!
           </p>
         )}
         

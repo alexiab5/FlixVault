@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import reviewApiService from "../services/reviewApiService"
 import { useAuth } from "./AuthContext"
+import devLog from '../lib/devLog'
 
 const ReviewDiaryContext = createContext()
 
@@ -33,19 +34,18 @@ export function ReviewDiaryProvider({ children }) {
       }
 
       try {
-        setIsLoading(true);
-        console.log("Initializing app and loading reviews...");
+        devLog.log("Initializing app and loading reviews...");
         
         // Check network first
         const networkOnline = navigator.onLine;
         setIsNetworkDown(!networkOnline);
-        console.log("Network status:", networkOnline ? "online" : "offline");
+        devLog.log("Network status:", networkOnline ? "online" : "offline");
         
         if (!networkOnline) {
           // Load from cache if network is down
           const cached = localStorage.getItem('cachedReviews');
           const cachedReviews = cached ? JSON.parse(cached) : [];
-          console.log("Loaded from cache (network down):", cachedReviews.length, "reviews");
+          devLog.log("Loaded from cache (network down):", cachedReviews.length, "reviews");
           setReviews(cachedReviews);
           setFilteredReviews(cachedReviews);
           setIsServerDown(false); // Not relevant when network is down
@@ -55,7 +55,7 @@ export function ReviewDiaryProvider({ children }) {
         // Check if server is reachable
         const isServerUp = await reviewApiService.isServerReachable();
         setIsServerDown(!isServerUp);
-        console.log("Server status:", isServerUp ? "up" : "down");
+        devLog.log("Server status:", isServerUp ? "up" : "down");
         
         let fetchedReviews = [];
         
@@ -65,7 +65,7 @@ export function ReviewDiaryProvider({ children }) {
             await reviewApiService.syncPendingReviews();
             const response = await reviewApiService.getAllReviews();
             fetchedReviews = response?.reviews || [];
-            console.log("Fetched from server:", fetchedReviews.length, "reviews");
+            devLog.log("Fetched from server:", fetchedReviews.length, "reviews");
             
             // Ensure we have valid reviews
             if (Array.isArray(fetchedReviews) && fetchedReviews.length > 0) {
@@ -79,18 +79,18 @@ export function ReviewDiaryProvider({ children }) {
               const cached = localStorage.getItem('cachedReviews');
               const cachedReviews = cached ? JSON.parse(cached) : [];
               if (cachedReviews.length > 0) {
-                console.log("Using cached reviews:", cachedReviews.length, "reviews");
+                devLog.log("Using cached reviews:", cachedReviews.length, "reviews");
                 setReviews(cachedReviews);
                 setFilteredReviews(cachedReviews);
               }
             }
           } catch (fetchError) {
-            console.error("Error fetching reviews:", fetchError);
+            devLog.error("Error fetching reviews:", fetchError);
             // Try to load from cache on fetch error
             const cached = localStorage.getItem('cachedReviews');
             const cachedReviews = cached ? JSON.parse(cached) : [];
             if (cachedReviews.length > 0) {
-              console.log("Using cached reviews after fetch error:", cachedReviews.length, "reviews");
+              devLog.log("Using cached reviews after fetch error:", cachedReviews.length, "reviews");
               setReviews(cachedReviews);
               setFilteredReviews(cachedReviews);
             }
@@ -99,7 +99,7 @@ export function ReviewDiaryProvider({ children }) {
           // Server is down, load from cache
           const cached = localStorage.getItem('cachedReviews');
           fetchedReviews = cached ? JSON.parse(cached) : [];
-          console.log("Loaded from cache (server down):", fetchedReviews.length, "reviews");
+          devLog.log("Loaded from cache (server down):", fetchedReviews.length, "reviews");
           if (fetchedReviews.length > 0) {
             setReviews(fetchedReviews);
             setFilteredReviews(fetchedReviews);
@@ -108,14 +108,14 @@ export function ReviewDiaryProvider({ children }) {
         
         setError(null);
       } catch (err) {
-        console.error("Error initializing app:", err);
+        devLog.error("Error initializing app:", err);
         setError("Failed to load reviews");
         
         // Fall back to cached reviews if available
         const cached = localStorage.getItem('cachedReviews');
         if (cached) {
           const cachedReviews = JSON.parse(cached);
-          console.log("Loaded from cache (after error):", cachedReviews.length, "reviews");
+          devLog.log("Loaded from cache (after error):", cachedReviews.length, "reviews");
           if (cachedReviews.length > 0) {
             setReviews(cachedReviews);
             setFilteredReviews(cachedReviews);
@@ -204,7 +204,7 @@ export function ReviewDiaryProvider({ children }) {
                 content: review.content
               });
             } catch (err) {
-              console.error(`Failed to sync review ${review.id}:`, err);
+              devLog.error(`Failed to sync review ${review.id}:`, err);
             }
           }
           
@@ -214,7 +214,7 @@ export function ReviewDiaryProvider({ children }) {
           setFilteredReviews(freshReviews);
         }
       } catch (err) {
-        console.error("Error syncing when back online:", err);
+        devLog.error("Error syncing when back online:", err);
       }
     };
     
@@ -299,7 +299,7 @@ export function ReviewDiaryProvider({ children }) {
       setError(null);
       return addedReview;
     } catch (err) {
-      console.error("Error adding review:", err);
+      devLog.error("Error adding review:", err);
       setError("Failed to add review");
       throw err;
     } finally {
@@ -340,7 +340,7 @@ export function ReviewDiaryProvider({ children }) {
       
       setError(null);
     } catch (err) {
-      console.error("Error deleting review:", err);
+      devLog.error("Error deleting review:", err);
       setError("Failed to delete review");
       throw err;
     } finally {
@@ -405,7 +405,7 @@ export function ReviewDiaryProvider({ children }) {
       setError(null);
       return result;
     } catch (err) {
-      console.error("Error updating review:", err);
+      devLog.error("Error updating review:", err);
       setError("Failed to update review");
       throw err;
     } finally {
@@ -433,7 +433,7 @@ export function ReviewDiaryProvider({ children }) {
       
       setError(null);
     } catch (err) {
-      console.error("Error filtering reviews:", err);
+      devLog.error("Error filtering reviews:", err);
       setError("Failed to filter reviews");
       
       // Fall back to local filtering
@@ -466,7 +466,7 @@ export function ReviewDiaryProvider({ children }) {
         return sortedReviews;
       }
     } catch (err) {
-      console.error("Error sorting reviews:", err);
+      devLog.error("Error sorting reviews:", err);
       setError("Failed to get sorted reviews");
       
       // Fall back to local sorting
@@ -510,7 +510,7 @@ export function ReviewDiaryProvider({ children }) {
       
       setError(null);
     } catch (err) {
-      console.error("Error sorting reviews:", err);
+      devLog.error("Error sorting reviews:", err);
       setError("Failed to sort reviews");
       
       // Fall back to local sorting
@@ -548,7 +548,7 @@ export function ReviewDiaryProvider({ children }) {
       
       setError(null);
     } catch (err) {
-      console.error("Error resetting reviews:", err);
+      devLog.error("Error resetting reviews:", err);
       setError("Failed to reset reviews");
     } finally {
       setIsLoading(false);
@@ -556,20 +556,20 @@ export function ReviewDiaryProvider({ children }) {
   };
 
   const getReviewById = async (reviewId) => {
-    console.log(`Trying to find review with ID: ${reviewId}`);
+    devLog.log(`Trying to find review with ID: ${reviewId}`);
     
     if (!reviewId) {
-      console.error("Invalid review ID provided");
+      devLog.error("Invalid review ID provided");
       return null;
     }
     
     // First check if it's in the current state
     const reviewFromState = reviews.find(r => String(r.id) === String(reviewId));
     if (reviewFromState) {
-      console.log("Found review in current state:", reviewFromState.movie);
+      devLog.log("Found review in current state:", reviewFromState.movie);
       return reviewFromState;
     }
-    console.log("Review not found in current state, checking localStorage...");
+    devLog.log("Review not found in current state, checking localStorage...");
     
     // If not in state, try to get from localStorage
     const cachedReviewsStr = localStorage.getItem('cachedReviews');
@@ -578,35 +578,35 @@ export function ReviewDiaryProvider({ children }) {
         const cachedReviews = JSON.parse(cachedReviewsStr);
         const cachedReview = cachedReviews.find(r => String(r.id) === String(reviewId));
         if (cachedReview) {
-          console.log("Found review in localStorage:", cachedReview.movie);
+          devLog.log("Found review in localStorage:", cachedReview.movie);
           return cachedReview;
         }
       } catch (err) {
-        console.error("Error parsing cached reviews:", err);
+        devLog.error("Error parsing cached reviews:", err);
       }
     }
-    console.log("Review not found in localStorage either");
+    devLog.log("Review not found in localStorage either");
     
     // If we're online, try to fetch from the server
     if (!isNetworkDown && !isServerDown) {
-      console.log("Attempting to fetch review from server...");
+      devLog.log("Attempting to fetch review from server...");
       try {
         const fetchedReview = await reviewApiService.getReviewById(reviewId);
         if (fetchedReview) {
-          console.log("Fetched review from server:", fetchedReview.movie);
+          devLog.log("Fetched review from server:", fetchedReview.movie);
           return fetchedReview;
         }
       } catch (err) {
-        console.error("Error fetching review from server:", err);
+        devLog.error("Error fetching review from server:", err);
       }
     }
     
-    console.log("Review not found anywhere");
+    devLog.log("Review not found anywhere");
     return null;
   };
 
   const handleExportReviews = useCallback(() => {
-    console.log('Exporting reviews from context:', reviews);
+    devLog.log('Exporting reviews from context:', reviews);
     if (!reviews || reviews.length === 0) {
       alert('No reviews to export');
       return;
@@ -632,7 +632,7 @@ export function ReviewDiaryProvider({ children }) {
 
     // Join all rows with newlines
     const csvContent = csvRows.join('\n');
-    console.log('CSV Content:', csvContent); // Debug log
+    devLog.log('CSV Content:', csvContent); // Debug log
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -850,7 +850,7 @@ export function ReviewDiaryProvider({ children }) {
                 
                 if (Math.abs(closestYear - review.movie.year) <= 1) {
                   // If the year difference is 1 or less, use this match
-                  console.log(`Using closest year match for ${review.movie.title}: ${closestYear} (requested ${review.movie.year})`);
+                  devLog.log(`Using closest year match for ${review.movie.title}: ${closestYear} (requested ${review.movie.year})`);
                   return closestMatch;
                 }
               }
@@ -971,7 +971,7 @@ export function ReviewDiaryProvider({ children }) {
         alert(`Successfully imported ${savedReviews.length} reviews`);
       }
     } catch (error) {
-      console.error('Error importing reviews:', error);
+      devLog.error('Error importing reviews:', error);
       alert(`Error importing reviews: ${error.message}`);
     }
   };

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import devLog from '../../../lib/devLog';
 
 export default function MonitoredUsersPage() {
   const [monitoredUsers, setMonitoredUsers] = useState([]);
@@ -15,13 +16,16 @@ export default function MonitoredUsersPage() {
   useEffect(() => {
     const fetchMonitoredUsers = async () => {
       try {
+        devLog.log("Fetching monitored users...");
         const response = await fetch('/api/admin/monitored-users');
         if (!response.ok) {
           throw new Error('Failed to fetch monitored users');
         }
         const data = await response.json();
+        devLog.log("Fetched users:", data);
         setMonitoredUsers(data.monitoredUsers);
       } catch (err) {
+        devLog.error("Error fetching users:", err);
         setError(err.message);
       } finally {
         setLoading(false);

@@ -3,41 +3,37 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import LoadingSpinner from './LoadingSpinner';
+import devLog from '../../lib/devLog';
 
 export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { user, loading, isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
 
-  console.log('=== PROTECTED ROUTE DEBUG ===');
-  console.log('User:', user);
-  console.log('Loading:', loading);
-  console.log('Is Authenticated:', isAuthenticated);
-  console.log('Is Admin:', isAdmin);
-  console.log('Require Admin:', requireAdmin);
-  console.log('===========================');
-
   useEffect(() => {
     if (!loading) {
+      devLog.log('=== PROTECTED ROUTE DEBUG ===');
+      devLog.log('User:', user);
+      devLog.log('Loading:', loading);
+      devLog.log('Is Authenticated:', isAuthenticated);
+      devLog.log('Is Admin:', isAdmin);
+      devLog.log('Require Admin:', requireAdmin);
+      devLog.log('===========================');
+
       if (!isAuthenticated) {
-        console.log('Not authenticated, redirecting to login');
+        devLog.log('Not authenticated, redirecting to login');
         router.push('/login');
       } else if (requireAdmin && !isAdmin) {
-        console.log('Not admin, redirecting to home');
-        router.push('/'); // Redirect to home if not admin
+        devLog.log('Not admin, redirecting to home');
+        router.push('/');
       }
     }
-  }, [loading, isAuthenticated, isAdmin, requireAdmin, router]);
+  }, [loading, isAuthenticated, isAdmin, requireAdmin, router, user]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <div>Loading...</div>;
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (requireAdmin && !isAdmin) {
+  if (!isAuthenticated || (requireAdmin && !isAdmin)) {
     return null;
   }
 

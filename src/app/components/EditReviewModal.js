@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
+import Icons from './Icons'
+import devLog from '../../lib/devLog'
 
 export default function EditReviewModal({ review, onClose, onSave }) {
   const [reviewText, setReviewText] = useState(review?.content || "")
   const [rating, setRating] = useState(review?.rating || 0)
   const [error, setError] = useState("")
   const { updateReview } = useReviewDiary()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Close modal if Escape key is pressed
   useEffect(() => {
@@ -45,11 +48,14 @@ export default function EditReviewModal({ review, onClose, onSave }) {
     return true
   }
 
-  const handleSave = async () => {
-    setError("")
-    if (!validateReview()) return
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
 
     try {
+      if (!validateReview()) return;
+
       const response = await fetch(`/api/movieReviews/${review.id}`, {
         method: "PUT",
         headers: {
@@ -97,8 +103,10 @@ export default function EditReviewModal({ review, onClose, onSave }) {
         throw new Error("Invalid review data received from server")
       }
     } catch (error) {
-      console.error("Error updating review:", error)
-      setError(error.message || "Failed to update review")
+      devLog.error("Error updating review:", error)
+      setError("Failed to update review. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -197,7 +205,7 @@ export default function EditReviewModal({ review, onClose, onSave }) {
         {/* Save button */}
         <div className="mt-6 md:mt-8 flex justify-center">
           <button
-            onClick={handleSave}
+            onClick={handleSubmit}
             className="bg-pink-500 hover:bg-pink-600 text-white text-base md:text-lg font-medium py-2 md:py-2.5 px-8 md:px-14 rounded-full shadow-lg transition-colors duration-300 cursor-pointer"
           >
             Save Changes

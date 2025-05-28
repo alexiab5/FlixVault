@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import devLog from '../lib/devLog';
 
 const AuthContext = createContext();
 
@@ -16,28 +17,28 @@ export function AuthProvider({ children }) {
     const token = Cookies.get('token');
     const storedUser = localStorage.getItem('user');
     
-    console.log('=== AUTH CONTEXT DEBUG ===');
-    console.log('Token:', token);
-    console.log('Stored User:', storedUser);
+    devLog.log('=== AUTH CONTEXT DEBUG ===');
+    devLog.log('Token:', token);
+    devLog.log('Stored User:', storedUser);
     
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log('Parsed User:', parsedUser);
-        console.log('User Role:', parsedUser?.role);
-        console.log('Is Admin Check:', parsedUser?.role === 'ADMIN');
+        devLog.log('Parsed User:', parsedUser);
+        devLog.log('User Role:', parsedUser?.role);
+        devLog.log('Is Admin Check:', parsedUser?.role === 'ADMIN');
         setUser(parsedUser);
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        devLog.error('Error parsing user data:', error);
       }
     }
-    console.log('========================');
+    devLog.log('========================');
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      console.log('=== LOGIN DEBUG ===');
+      devLog.log('=== LOGIN DEBUG ===');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,10 +46,10 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
-      console.log('Login response:', data);
-      console.log('User role from login:', data.user?.role);
-      console.log('Is admin check from login:', data.user?.role === 'ADMIN');
-      console.log('===================');
+      devLog.log('Login response:', data);
+      devLog.log('User role from login:', data.user?.role);
+      devLog.log('Is admin check from login:', data.user?.role === 'ADMIN');
+      devLog.log('===================');
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
@@ -75,7 +76,7 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
-      console.log('Register response:', data);
+      devLog.log('Register response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');

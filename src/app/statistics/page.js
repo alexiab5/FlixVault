@@ -19,6 +19,7 @@ import {
   Cell,
 } from "recharts"
 import clsx from "clsx"
+import devLog from '../../lib/devLog'
 
 const Card = ({ className, children, ...props }) => {
   return (
@@ -79,12 +80,11 @@ export default function AnalyticsPage() {
 
   // Debug logging for initial load and reviews changes
   useEffect(() => {
-    console.log("Statistics page - Reviews state:", {
-      reviewCount: reviews.length,
-      isLoading: contextLoading,
-      timestamp: new Date().toISOString()
+    devLog.log("Statistics page - Reviews state:", {
+      totalReviews: reviews.length,
+      filteredReviews: reviews.length
     })
-  }, [reviews, contextLoading])
+  }, [reviews])
 
   // Function to navigate back to diary
   const handleBackToDiary = () => {
@@ -93,13 +93,13 @@ export default function AnalyticsPage() {
 
   // Function to manually refresh data
   const handleRefresh = () => {
-    console.log("Statistics page - Manual refresh triggered")
+    devLog.log("Statistics page - Manual refresh triggered")
     fetchReviews()
   }
 
   // Calculate rating distribution data
   const ratingDistributionData = useMemo(() => {
-    console.log("Statistics page - Calculating rating distribution")
+    devLog.log("Statistics page - Calculating rating distribution")
     const distribution = [
       { name: "5 Stars", count: 0 },
       { name: "4 Stars", count: 0 },

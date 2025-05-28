@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useReviewDiary } from "../../context/ReviewDiaryContext"
+import devLog from '../../lib/devLog'
 
 export default function AddReviewModal({ movieId, onClose, onReviewAdded }) {
   const [movie, setMovie] = useState(null)
@@ -52,18 +53,18 @@ export default function AddReviewModal({ movieId, onClose, onReviewAdded }) {
           cachedReviews[movieId] = reviewsToCache;
           localStorage.setItem('cachedReviews', JSON.stringify(cachedReviews));
         } catch (e) {
-          console.warn('Failed to cache reviews:', e);
+          devLog.warn('Failed to cache reviews:', e);
           // If caching fails, clear the cache and try again with just the current movie
           try {
             localStorage.setItem('cachedReviews', JSON.stringify({
               [movieId]: reviewsToCache
             }));
           } catch (e2) {
-            console.warn('Failed to cache reviews even after clearing:', e2);
+            devLog.warn('Failed to cache reviews even after clearing:', e2);
           }
         }
       } catch (error) {
-        console.error('Error fetching movie details:', error);
+        devLog.error('Error fetching movie details:', error);
         setError("Failed to load movie details. Please try again.")
       } finally {
         setIsLoading(false);
@@ -157,8 +158,8 @@ export default function AddReviewModal({ movieId, onClose, onReviewAdded }) {
       
       onClose();
     } catch (error) {
-      console.error("Error adding review:", error);
-      setError(error.message || "Failed to add review");
+      devLog.error("Error adding review:", error);
+      setError("Failed to add review. Please try again.");
     } finally {
       setIsLoading(false);
     }
