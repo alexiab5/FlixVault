@@ -77,7 +77,13 @@ export default function MovieDiary() {
 
   const { user, logout } = useAuth();
 
-  const loadingRef = useRef(false); // Add this ref to track loading state
+  const loadingRef = useRef(false);
+  const displayedReviewsRef = useRef([]); // Add this ref to track current displayed reviews
+
+  // Update the ref whenever displayedReviews changes
+  useEffect(() => {
+    displayedReviewsRef.current = displayedReviews;
+  }, [displayedReviews]);
 
   // Load reviews function - moved to top
   const loadReviews = useCallback(async (page, shouldRefresh = false) => {
@@ -122,20 +128,16 @@ export default function MovieDiary() {
           // If it's the first page or we're refreshing, replace all reviews
           console.log('Setting first page reviews:', data.reviews.length);
           setDisplayedReviews(data.reviews);
-          // Also update the context's reviews
           setReviews(data.reviews);
         } else {
           // For subsequent pages, append new reviews
-          setDisplayedReviews(prev => {
-            const newReviews = data.reviews.filter(
-              newReview => !prev.some(existingReview => existingReview.id === newReview.id)
-            );
-            console.log('Appending new reviews:', newReviews.length);
-            const updatedReviews = [...prev, ...newReviews];
-            // Also update the context's reviews
-            setReviews(updatedReviews);
-            return updatedReviews;
-          });
+          const newReviews = data.reviews.filter(
+            newReview => !displayedReviewsRef.current.some(existingReview => existingReview.id === newReview.id)
+          );
+          console.log('Appending new reviews:', newReviews.length);
+          const updatedReviews = [...displayedReviewsRef.current, ...newReviews];
+          setDisplayedReviews(updatedReviews);
+          setReviews(updatedReviews);
         }
         
         setHasMore(data.pagination.page < data.pagination.totalPages);
@@ -148,7 +150,7 @@ export default function MovieDiary() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE, setReviews]); // Add setReviews to dependencies
+  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE, setReviews]); // Remove displayedReviews from dependencies
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
@@ -156,10 +158,7 @@ export default function MovieDiary() {
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoading && !isRefreshing && !loadingRef.current) {
           loadingRef.current = true;
-          setCurrentPage(prev => {
-            loadingRef.current = false;
-            return prev + 1;
-          });
+          setCurrentPage(prev => prev + 1);
         }
       },
       { threshold: 0.1 }
@@ -183,6 +182,10 @@ export default function MovieDiary() {
     } else {
       loadReviews(currentPage, false);
     }
+    // Reset loading ref after reviews are loaded
+    return () => {
+      loadingRef.current = false;
+    };
   }, [currentPage, loadReviews, isRefreshing]);
 
   // Generate multiple random reviews for testing the sliding window
