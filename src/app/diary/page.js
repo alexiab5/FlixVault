@@ -64,7 +64,7 @@ export default function MovieDiary() {
   const [reviewCount, setReviewCount] = useState(0);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
-  const [importProgress, setImportProgress] = useState({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+  const [importProgress, setImportProgress] = useState({ active: false });
   const [observerTarget, setObserverTarget] = useState(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [checkedReview, setCheckedReview] = useState(null);
@@ -149,6 +149,32 @@ export default function MovieDiary() {
       setIsRefreshing(false);
     }
   }, [selectedRatings, sortOrder, ITEMS_PER_PAGE, setReviews]); // Add setReviews to dependencies
+
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isRefreshing && !loadingRef.current) {
+          loadingRef.current = true;
+          setCurrentPage(prev => {
+            loadingRef.current = false;
+            return prev + 1;
+          });
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget) {
+      observer.observe(observerTarget);
+    }
+
+    return () => {
+      if (observerTarget) {
+        observer.unobserve(observerTarget);
+      }
+    };
+  }, [hasMore, isLoading, observerTarget, isRefreshing]);
 
   // Load reviews when page changes
   useEffect(() => {
@@ -396,28 +422,6 @@ export default function MovieDiary() {
     setHasMore(true);
   };
 
-  // Set up intersection observer for infinite scrolling
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isRefreshing) {
-          setCurrentPage(prev => prev + 1);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget) {
-      observer.observe(observerTarget);
-    }
-
-    return () => {
-      if (observerTarget) {
-        observer.unobserve(observerTarget);
-      }
-    };
-  }, [hasMore, isLoading, observerTarget, isRefreshing]);
-
   // Get highlight class for a review
   const getHighlightClass = (review) => {
     if (specialReviews.mostRecent5Star === review.id) {
@@ -469,12 +473,15 @@ export default function MovieDiary() {
     if (!file) return
 
     try {
+      setImportProgress({ active: true })
       await importReviews(file)
       // Refresh the reviews list
       await refreshReviews()
     } catch (error) {
       console.error('Error importing reviews:', error)
       alert('Failed to import reviews: ' + error.message)
+    } finally {
+      setImportProgress({ active: false })
     }
   }
 
@@ -505,21 +512,10 @@ export default function MovieDiary() {
           </label>
         </div>
         
-        {/* Import Progress Indicator */}
+        {/* Import Loading Spinner */}
         {importProgress.active && (
-          <div className="mb-4 p-4 bg-gray-800 rounded-lg text-white">
-            <h3 className="font-bold mb-2">Importing Reviews...</h3>
-            <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden mb-2">
-              <div 
-                className="bg-purple-500 h-full transition-all duration-300" 
-                style={{ width: `${Math.min(100, (importProgress.current / importProgress.total) * 100)}%` }}
-              ></div>
-            </div>
-            <div className="text-sm">
-              Progress: {importProgress.current} of {importProgress.total} reviews
-              <br />
-              Success: {importProgress.success} | Failed: {importProgress.failed}
-            </div>
+          <div className="mb-4 flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
           </div>
         )}
         
