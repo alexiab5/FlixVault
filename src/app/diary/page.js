@@ -51,7 +51,7 @@ const debounce = (func, wait) => {
 };
 
 export default function MovieDiary() {
-  const { reviews, deleteReview, sortReviews, setReviews, addReview } = useReviewDiary()
+  const { reviews, deleteReview, sortReviews, setReviews, addReview, exportReviews, importReviews } = useReviewDiary()
   const [displayedReviews, setDisplayedReviews] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +122,8 @@ export default function MovieDiary() {
           // If it's the first page or we're refreshing, replace all reviews
           console.log('Setting first page reviews:', data.reviews.length);
           setDisplayedReviews(data.reviews);
+          // Also update the context's reviews
+          setReviews(data.reviews);
         } else {
           // For subsequent pages, append new reviews
           setDisplayedReviews(prev => {
@@ -129,7 +131,10 @@ export default function MovieDiary() {
               newReview => !prev.some(existingReview => existingReview.id === newReview.id)
             );
             console.log('Appending new reviews:', newReviews.length);
-            return [...prev, ...newReviews];
+            const updatedReviews = [...prev, ...newReviews];
+            // Also update the context's reviews
+            setReviews(updatedReviews);
+            return updatedReviews;
           });
         }
         
@@ -143,7 +148,7 @@ export default function MovieDiary() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE]); // Remove isLoading and isRefreshing from dependencies
+  }, [selectedRatings, sortOrder, ITEMS_PER_PAGE, setReviews]); // Add setReviews to dependencies
 
   // Load reviews when page changes
   useEffect(() => {
@@ -433,222 +438,45 @@ export default function MovieDiary() {
     return ""
   }
 
-  // Export reviews to CSV
-  const exportToCsv = useCallback(() => {
-    if (!reviews.length) {
+  // Remove the old exportToCsv function and replace with:
+  const handleExport = () => {
+    console.log('Displayed Reviews:', displayedReviews);
+    console.log('Context Reviews:', reviews);
+    
+    // Use displayedReviews since that's what's shown on the page
+    if (!displayedReviews || displayedReviews.length === 0) {
       alert('No reviews to export');
       return;
     }
-
-    const headers = ['tmdbId', 'rating', 'content', 'createdAt'];
-    const rows = reviews.map(review => {
-      // Get tmdbId from either the nested movie object or the review itself
-      const tmdbId = review.movie?.tmdbId || review.tmdbId;
-      
-      if (!tmdbId) {
-        console.error('Review missing TMDB ID:', review);
-        return null;
-      }
-      
-      // Convert line endings to \n and escape quotes
-      const escapedContent = review.content
-        .replace(/\r\n/g, '\\n')  // Convert Windows line endings
-        .replace(/\n/g, '\\n')    // Convert Unix line endings
-        .replace(/"/g, '""');     // Escape quotes
-      
-      return [
-        tmdbId,
-        review.rating,
-        escapedContent,
-        review.createdAt
-      ];
-    }).filter(Boolean); // Remove any null rows
-
-    if (rows.length === 0) {
-      alert('No valid reviews to export');
-      return;
-    }
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `movie-reviews-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  }, [reviews]);
-
-  // Handle CSV file upload
-  const handleFileUpload = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Reset file input
-    event.target.value = null;
-
-    // Check if it's a CSV file
-    if (!file.name.endsWith('.csv')) {
-      alert('Please upload a CSV file');
-      return;
-    }
-
-    // Initialize import progress
-    setImportProgress({ active: true, current: 0, total: 0, success: 0, failed: 0 });
-
-    // Use a more efficient approach for large files
-    const reader = new FileReader();
     
-    reader.onload = async (e) => {
-      try {
-        const csvText = e.target.result;
-        
-        // Split into lines, preserving quoted content
-        const lines = [];
-        let currentLine = [];
-        let inQuotes = false;
-        let currentValue = '';
-        
-        for (let i = 0; i < csvText.length; i++) {
-          const char = csvText[i];
-          const nextChar = csvText[i + 1];
-          
-          if (char === '"') {
-            if (inQuotes && nextChar === '"') {
-              // Handle escaped quotes
-              currentValue += '"';
-              i++; // Skip the next quote
-            } else {
-              inQuotes = !inQuotes;
-            }
-          } else if (char === ',' && !inQuotes) {
-            currentLine.push(currentValue.trim()); // Trim whitespace
-            currentValue = '';
-          } else if (char === '\n' && !inQuotes) {
-            currentLine.push(currentValue.trim()); // Trim whitespace
-            lines.push(currentLine);
-            currentLine = [];
-            currentValue = '';
-          } else {
-            currentValue += char;
-          }
-        }
-        
-        // Add the last line if there's any content
-        if (currentValue || currentLine.length > 0) {
-          currentLine.push(currentValue.trim()); // Trim whitespace
-          lines.push(currentLine);
-        }
-
-        // Check if the CSV has the expected format
-        if (lines.length < 2) {
-          alert('The CSV file is empty or has an invalid format');
-          setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
-          return;
-        }
-
-        // Parse headers
-        const headers = lines[0];
-        const expectedHeaders = ['tmdbId', 'rating', 'content', 'createdAt'];
-        
-        // Check if all expected headers are present
-        const hasAllHeaders = expectedHeaders.every(header => 
-          headers.includes(header)
-        );
-        
-        if (!hasAllHeaders) {
-          alert('The CSV file does not have the expected format. Expected headers: ' + expectedHeaders.join(', '));
-          setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
-          return;
-        }
-
-        // Process rows in chunks to avoid blocking the UI
-        const totalRows = lines.length - 1; // Exclude header row
-        setImportProgress(prev => ({ ...prev, total: totalRows }));
-        
-        // Process in chunks of 10 rows at a time
-        const CHUNK_SIZE = 10;
-        let currentRow = 1; // Start after header
-        
-        const processChunk = async () => {
-          const chunkEnd = Math.min(currentRow + CHUNK_SIZE, totalRows);
-          
-          for (let i = currentRow; i < chunkEnd; i++) {
-            try {
-              const row = lines[i];
-              
-              // Parse the row data
-              const tmdbIdStr = row[headers.indexOf('tmdbId')]?.trim();
-              if (!tmdbIdStr) {
-                throw new Error('TMDB ID is missing');
-              }
-              
-              const tmdbId = parseInt(tmdbIdStr, 10);
-              if (isNaN(tmdbId)) {
-                throw new Error(`Invalid TMDB ID: "${tmdbIdStr}"`);
-              }
-
-              const rating = parseInt(row[headers.indexOf('rating')], 10);
-              if (isNaN(rating) || rating < 0 || rating > 5) {
-                throw new Error(`Invalid rating: ${row[headers.indexOf('rating')]}`);
-              }
-
-              // Handle escaped newlines in content
-              const content = row[headers.indexOf('content')]
-                .replace(/\\n/g, '\n')  // Convert escaped newlines back to actual newlines
-                .replace(/""/g, '"');   // Convert escaped quotes back to single quotes
-
-              const createdAt = row[headers.indexOf('createdAt')];
-
-              // First, ensure the movie exists in our database
-              const movieResponse = await fetch(`/api/movies/${tmdbId}`);
-              if (!movieResponse.ok) {
-                throw new Error(`Movie with TMDB ID ${tmdbId} not found`);
-              }
-              const { movie } = await movieResponse.json();
-
-              // Create the review
-              const reviewData = {
-                rating,
-                content,
-                movieId: movie.id,
-                createdAt: createdAt || new Date().toISOString()
-              };
-
-              await addReview(reviewData);
-              setImportProgress(prev => ({ ...prev, current: i, success: prev.success + 1 }));
-            } catch (error) {
-              console.error('Error adding review:', error);
-              setImportProgress(prev => ({ ...prev, current: i, failed: prev.failed + 1 }));
-            }
-          }
-          
-          currentRow = chunkEnd;
-          
-          // If there are more rows to process, schedule the next chunk
-          if (currentRow < totalRows) {
-            // Use setTimeout to allow the UI to update
-            setTimeout(processChunk, 0);
-          } else {
-            // Import complete
-            setImportProgress(prev => ({ ...prev, active: false }));
-            alert(`Import complete. Successfully imported ${importProgress.success} reviews. Failed: ${importProgress.failed}`);
-          }
-        };
-        
-        // Start processing the first chunk
-        processChunk();
-      } catch (error) {
-        console.error('Error parsing CSV:', error);
-        alert('Error parsing the CSV file. Please check the format.');
-        setImportProgress({ active: false, current: 0, total: 0, success: 0, failed: 0 });
+    // Format the reviews for export
+    const reviewsToExport = displayedReviews.map(review => ({
+      ...review,
+      movie: {
+        title: review.movie?.title || review.movie,
+        posterPath: review.movie?.posterPath || review.poster,
+        releaseDate: review.movie?.releaseDate || new Date(review.released).toISOString()
       }
-    };
+    }));
     
-    reader.readAsText(file);
-  }, [addReview, importProgress.success, importProgress.failed]);
+    console.log('Exporting reviews:', reviewsToExport);
+    exportReviews(reviewsToExport);
+  }
+
+  // Update the file upload handler:
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    try {
+      await importReviews(file)
+      // Refresh the reviews list
+      await refreshReviews()
+    } catch (error) {
+      console.error('Error importing reviews:', error)
+      alert('Failed to import reviews: ' + error.message)
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -658,23 +486,15 @@ export default function MovieDiary() {
         {/* Add buttons for generating reviews and CSV operations */}
         <div className="mb-4 flex justify-center space-x-2">
           <Button 
-            onClick={() => generateMultipleReviews(20)} 
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-            disabled={isGeneratingReviews}
+            onClick={handleExport} 
+            className="bg-transparent hover:bg-white/10 text-white px-4 py-2 rounded-lg"
+            disabled={displayedReviews.length === 0}
           >
-            {isGeneratingReviews ? `Generating Reviews (${reviewCount})...` : 'Generate More Reviews'}
+            Export Reviews
           </Button>
           
-          <Button 
-            onClick={exportToCsv} 
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-            disabled={reviews.length === 0}
-          >
-            Export to CSV
-          </Button>
-          
-          <label className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer">
-            Import from CSV
+          <label className="bg-transparent hover:bg-white/10 text-white px-4 py-2 rounded-lg cursor-pointer">
+            Import Reviews
             <input 
               type="file" 
               accept=".csv" 
