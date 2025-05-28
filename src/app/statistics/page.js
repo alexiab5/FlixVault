@@ -45,10 +45,37 @@ const Button = ({ className, variant = "ghost", children, ...props }) => {
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088FE", "#00C49F", "#FFBB28", "#FF8042"]
 
 export default function AnalyticsPage() {
-  const { reviews, isLoading: contextLoading } = useReviewDiary()
+  const { reviews, isLoading: contextLoading, setReviews } = useReviewDiary()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date())
+
+  // Fetch reviews when component mounts or when manually refreshed
+  const fetchReviews = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/movieReviews?page=1&limit=1000')
+      if (!response.ok) {
+        throw new Error('Failed to fetch reviews')
+      }
+      const data = await response.json()
+      if (data.reviews) {
+        setReviews(data.reviews)
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+    } finally {
+      setIsLoading(false)
+      setLastUpdateTime(new Date())
+    }
+  }, [setReviews])
+
+  // Initial data fetch
+  useEffect(() => {
+    if (!contextLoading) {
+      fetchReviews()
+    }
+  }, [fetchReviews, contextLoading])
 
   // Debug logging for initial load and reviews changes
   useEffect(() => {
@@ -57,7 +84,6 @@ export default function AnalyticsPage() {
       isLoading: contextLoading,
       timestamp: new Date().toISOString()
     })
-    setLastUpdateTime(new Date())
   }, [reviews, contextLoading])
 
   // Function to navigate back to diary
@@ -68,12 +94,7 @@ export default function AnalyticsPage() {
   // Function to manually refresh data
   const handleRefresh = () => {
     console.log("Statistics page - Manual refresh triggered")
-    setIsLoading(true)
-    // Force a re-render by updating the loading state
-    setTimeout(() => {
-      setIsLoading(false)
-      setLastUpdateTime(new Date())
-    }, 300)
+    fetchReviews()
   }
 
   // Calculate rating distribution data
@@ -165,14 +186,6 @@ export default function AnalyticsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">Movie Analytics</h1>
         <div className="flex space-x-4">
-          <Button
-            variant="primary"
-            onClick={handleRefresh}
-            disabled={isLoading || contextLoading}
-            className={isLoading || contextLoading ? "opacity-50 cursor-not-allowed" : ""}
-          >
-            {isLoading || contextLoading ? "Refreshing..." : "Refresh Data"}
-          </Button>
           <Button variant="primary" onClick={handleBackToDiary}>
             Back to Diary
           </Button>
