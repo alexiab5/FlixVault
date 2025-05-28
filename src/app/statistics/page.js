@@ -185,10 +185,42 @@ export default function AnalyticsPage() {
     })
   }, [reviews])
 
+  // Calculate genre distribution (top 6 + 'Other', strict)
+  const genreDistributionData = useMemo(() => {
+    const genreData = {}
+
+    reviews.forEach((review) => {
+      const genres = review.movie?.genres || []
+      genres.forEach(({ genre }) => {
+        const genreName = genre.name
+        if (!genreData[genreName]) {
+          genreData[genreName] = {
+            name: genreName,
+            count: 0,
+          }
+        }
+        genreData[genreName].count += 1
+      })
+    })
+
+    // Sort by count (most frequent first)
+    const sortedGenres = Object.values(genreData).sort((a, b) => b.count - a.count)
+    const TOP_N = 6
+    // Only show the first TOP_N genres, all others go into 'Other'
+    const topGenres = sortedGenres.slice(0, TOP_N)
+    const otherGenres = sortedGenres.slice(TOP_N)
+    const otherCount = otherGenres.reduce((sum, g) => sum + g.count, 0)
+    const result = [...topGenres]
+    if (otherCount > 0) {
+      result.push({ name: 'Other', count: otherCount, isOther: true })
+    }
+    return result
+  }, [reviews])
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white">Movie Analytics</h1>
+        <h1 className="text-3xl font-bold text-white">Your Reviews Over Time</h1>
         <div className="flex space-x-4">
           <Button variant="primary" onClick={handleBackToDiary}>
             Back to Diary
@@ -273,9 +305,9 @@ export default function AnalyticsPage() {
           </Card>
 
           {/* Release Year Distribution Chart */}
-          <Card className="col-span-1 md:col-span-2">
+          <Card className="col-span-1">
             <h2 className="text-xl font-semibold text-white mb-4">Movies by Release Year</h2>
-            <div className="h-80">
+            <div className="h-[32rem]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -301,9 +333,78 @@ export default function AnalyticsPage() {
                       borderRadius: "8px",
                       color: "white",
                     }}
+                    itemStyle={{
+                      color: "white",
+                    }}
                     formatter={(value, name) => [`${value} movies`, `Year: ${name}`]}
                   />
-                  <Legend wrapperStyle={{ color: "white" }} />
+                  <Legend 
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{
+                      color: "white",
+                      marginTop: 24,
+                      paddingLeft: 24,
+                      paddingRight: 24,
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 32,
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* Genre Distribution Chart */}
+          <Card className="col-span-1">
+            <h2 className="text-xl font-semibold text-white mb-4">Movies by Genre</h2>
+            <div className="h-[32rem]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 20, right: 80, left: 60, bottom: 20 }}>
+                  <Pie
+                    data={genreDistributionData}
+                    cx="48%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="count"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    animationDuration={500}
+                  >
+                    {genreDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(0,0,0,0.8)",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "white",
+                    }}
+                    itemStyle={{
+                      color: "white",
+                    }}
+                    formatter={(value, name) => [`${value} movies`, `Genre: ${name}`]}
+                  />
+                  <Legend 
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{
+                      color: "white",
+                      marginTop: 24,
+                      paddingLeft: 24,
+                      paddingRight: 24,
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 32,
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
