@@ -18,7 +18,7 @@ async function getDefaultUserId() {
 
 export async function GET(request, { params }) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const review = await db.getReviewById(id);
 
     if (!review) {
@@ -35,7 +35,7 @@ export async function GET(request, { params }) {
 export const PUT = withAuditLog(
   async (request, { params }) => {
     try {
-      const id = params.id;
+      const { id } = await params;
       const updatedData = await request.json();
       
       // Validate review data
@@ -104,13 +104,16 @@ export const PUT = withAuditLog(
     }
   },
   'Review',
-  (request, { params }) => params.id
+  async (request, { params }) => {
+    const { id } = await params;
+    return id;
+  }
 );
 
 export const DELETE = withAuditLog(
   async (request, { params }) => {
     try {
-      const id = params.id;
+      const { id } = await params;
       
       // Get user ID from token
       const token = request.cookies.get('token')?.value;
@@ -158,5 +161,8 @@ export const DELETE = withAuditLog(
     }
   },
   'Review',
-  (request, { params }) => params.id
+  async (request, { params }) => {
+    const { id } = await params;
+    return id;
+  }
 );
